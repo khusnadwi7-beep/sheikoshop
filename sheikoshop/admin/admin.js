@@ -209,8 +209,8 @@ function saveAccountStock() {
 }
 
 function loadAccountStock() {
+  // Tampilkan semua akun termasuk yang sudah sold
   db.collection("account_stock")
-    .where("status", "==", "available")
     .orderBy("createdAt", "desc")
     .onSnapshot(snapshot => {
       const rows = document.getElementById("stockRows");
@@ -458,6 +458,7 @@ function confirmOrderPaid(orderId) {
     const stockRef = stockDoc.ref;
     const stock = stockDoc.data();
 
+    // Status berubah sold tapi data tetap ada
     transaction.update(stockRef, {
       status: "sold",
       orderId,
