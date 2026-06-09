@@ -1,60 +1,304 @@
 firebase.initializeApp(window.firebaseConfig);
+
 const auth = firebase.auth();
 const db = firebase.firestore();
-let products = [], payments = [], orders = [], settingsId = null;
-const fmt = n => "Rp" + Number(n || 0).toLocaleString("id-ID");
+const ADMIN_EMAIL = "khusnadwi7@gmail.com";
 
-window.loginAdmin = async function(){
+function rupiah(n) {
+  return "Rp" + Number(n || 0).toLocaleString("id-ID");
+}
+
+function show(id) {
+  document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
+
+  document.getElementById("pageTitle").innerText =
+    id === "produk" ? "Produk" :
+    id === "pesanan" ? "Pesanan" :
+    id === "payment" ? "Payment" :
+    id === "setting" ? "Pengaturan Toko" : "Dashboard";
+}
+
+function loginAdmin() {
   const email = document.getElementById("loginEmail").value.trim();
-  const password = document.getElementById("loginPassword").value.trim();
-  try { await auth.signInWithEmailAndPassword(email, password); }
-  catch(err){ document.getElementById("loginError").textContent = "Login gagal: " + err.message; }
-};
-window.logoutAdmin = async function(){ await auth.signOut(); };
+  const password = document.getElementById("loginPassword").value;
+  const err = document.getElementById("loginError");
 
-auth.onAuthStateChanged(async user => {
-  if(user){ document.getElementById("loginPage").style.display="none"; document.getElementById("adminApp").style.display="flex"; await loadAll(); }
-  else { document.getElementById("loginPage").style.display="block"; document.getElementById("adminApp").style.display="none"; }
+  err.innerText = "Memproses login...";
+
+  auth.signInWithEmailAndPassword(email, password)
+    .then(res => {
+      if (res.user.email !== ADMIN_EMAIL) {
+        auth.signOut();
+        err.innerText = "Email ini bukan admin.";
+      } else {
+        err.innerText = "";
+      }
+    })
+    .catch(e => err.innerText = e.message);
+}
+
+function logoutAdmin() {
+  auth.signOut();
+}
+
+auth.onAuthStateChanged(user => {
+  if (user && user.email === ADMIN_EMAIL) {
+    document.getElementById("loginPage").style.display = "none";
+    document.getElementById("adminApp").style.display = "flex";
+
+    loadProducts();
+    loadPayments();
+    loadOrders();
+    loadSettings();
+  } else {
+    document.getElementById("loginPage").style.display = "flex";
+    document.getElementById("adminApp").style.display = "none";
+  }
 });
 
-window.show = function(id){
-  document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));
-  const page = document.getElementById(id); if(page) page.classList.remove("hidden");
-  document.querySelectorAll(".menu a").forEach(a=>a.classList.remove("active"));
-  const menu = Array.from(document.querySelectorAll(".menu a")).find(a=>a.getAttribute("onclick") && a.getAttribute("onclick").includes("'"+id+"'"));
-  if(menu){ menu.classList.add("active"); document.getElementById("pageTitle").textContent = menu.textContent.trim(); }
-};
+/* PRODUK */
 
-async function loadAll(){ await loadProducts(); await loadPayments(); await loadOrders(); await loadSettings(); renderDashboard(); }
-async function loadProducts(){ const snap = await db.collection("products").get(); products = snap.docs.map(d=>({id:d.id,...d.data()})); renderProducts(); }
-function renderProducts(){ const el=document.getElementById("productRows"); if(!el)return; el.innerHTML = products.length ? products.map(p=>`<tr><td>${p.name||"-"}</td><td>${p.category||"-"}</td><td>${fmt(p.price)}</td><td><button class="btn ghost" onclick="editProduct('${p.id}')">Edit</button><button class="btn ghost" onclick="deleteProduct('${p.id}')">Hapus</button></td></tr>`).join("") : `<tr><td colspan="4">Belum ada produk.</td></tr>`; }
-window.saveProduct = async function(){
-  const id=document.getElementById("productId").value;
-  const payload={name:document.getElementById("pname").value.trim(), price:Number(document.getElementById("pprice").value||0), category:document.getElementById("pcat").value.trim(), icon:document.getElementById("picon").value.trim()||"APP", description:document.getElementById("pdesc").value.trim(), short_text:"Akun Premium • Garansi", rating:5, sold:0, is_active:true, updated_at:new Date().toISOString()};
-  if(!payload.name || !payload.price) return alert("Nama dan harga wajib diisi.");
-  if(id) await db.collection("products").doc(id).update(payload); else { payload.created_at = new Date().toISOString(); await db.collection("products").add(payload); }
-  resetProductForm(); await loadProducts(); renderDashboard(); alert("Produk berhasil disimpan.");
-};
-window.editProduct = function(id){ const p=products.find(x=>x.id===id); if(!p)return; productId.value=p.id; pname.value=p.name||""; pprice.value=p.price||""; pcat.value=p.category||""; picon.value=p.icon||""; pdesc.value=p.description||""; show("produk"); };
-window.resetProductForm = function(){ productId.value=""; pname.value=""; pprice.value=""; pcat.value=""; picon.value=""; pdesc.value=""; };
-window.deleteProduct = async function(id){ if(!confirm("Hapus produk ini?"))return; await db.collection("products").doc(id).delete(); await loadProducts(); renderDashboard(); };
+function resetProductForm() {
+  document.getElementById("productId").value = "";
+  document.getElementById("pname").value = "";
+  document.getElementById("pprice").value = "";
+  document.getElementById("pcat").value = "";
+  document.getElementById("pimageurl").value = "";
+  document.getElementById("pdesc").value = "";
+  document.getElementById("imagePreview").innerHTML = "";
+}
 
-async function loadPayments(){ const snap=await db.collection("payments").get(); payments=snap.docs.map(d=>({id:d.id,...d.data()})); renderPayments(); }
-function renderPayments(){ const el=document.getElementById("paymentRows"); if(!el)return; el.innerHTML = payments.length ? payments.map(p=>`<tr><td>${p.name||"-"}</td><td>${p.type||"-"}</td><td>${p.account_number||"-"}</td><td><button class="btn ghost" onclick="editPayment('${p.id}')">Edit</button><button class="btn ghost" onclick="deletePayment('${p.id}')">Hapus</button></td></tr>`).join("") : `<tr><td colspan="4">Belum ada payment.</td></tr>`; }
-window.savePayment = async function(){
-  const id=paymentId.value;
-  const payload={name:payName.value.trim(), type:payType.value, account_name:payAccountName.value.trim(), account_number:payAccountNumber.value.trim(), description:payDesc.value.trim(), qris_url:payQris.value.trim(), is_active:true, updated_at:new Date().toISOString()};
-  if(!payload.name)return alert("Nama payment wajib diisi.");
-  if(id) await db.collection("payments").doc(id).update(payload); else { payload.created_at=new Date().toISOString(); await db.collection("payments").add(payload); }
-  paymentId.value=""; payName.value=""; payAccountName.value=""; payAccountNumber.value=""; payDesc.value=""; payQris.value=""; await loadPayments(); alert("Payment berhasil disimpan.");
-};
-window.editPayment = function(id){ const p=payments.find(x=>x.id===id); if(!p)return; paymentId.value=p.id; payName.value=p.name||""; payType.value=p.type||"QRIS"; payAccountName.value=p.account_name||""; payAccountNumber.value=p.account_number||""; payDesc.value=p.description||""; payQris.value=p.qris_url||""; show("payment"); };
-window.deletePayment = async function(id){ if(!confirm("Hapus payment ini?"))return; await db.collection("payments").doc(id).delete(); await loadPayments(); };
+function saveProduct() {
+  const id = document.getElementById("productId").value;
 
-async function loadOrders(){ const snap=await db.collection("orders").get(); orders=snap.docs.map(d=>({id:d.id,...d.data()})); renderOrders(); }
-function renderOrders(){ const rows=document.getElementById("orderRows"), manage=document.getElementById("manageOrders"); if(rows) rows.innerHTML = orders.length ? orders.slice(0,5).map(o=>`<tr><td>${o.invoice||"-"}</td><td>${o.product_name||"-"}</td><td>${o.status||"-"}</td><td>${fmt(o.price)}</td></tr>`).join("") : `<tr><td>Belum ada order</td></tr>`; if(manage) manage.innerHTML = orders.length ? orders.map(o=>`<div class="card" style="margin-bottom:14px"><h3>${o.invoice||"-"}</h3><p><b>Produk:</b> ${o.product_name||"-"}</p><p><b>Pembeli:</b> ${o.buyer_name||o.customer_name||"-"}</p><p><b>Kontak:</b> ${o.buyer_contact||"-"}</p><p><b>Total:</b> ${fmt(o.price)}</p><p><b>Status:</b> ${o.status||"-"}</p><button class="btn" onclick="updateOrder('${o.id}','Selesai')">Approve</button><button class="btn ghost" onclick="updateOrder('${o.id}','Ditolak')">Reject</button></div>`).join("") : `<div class="card">Belum ada pesanan.</div>`; }
-window.updateOrder = async function(id,status){ await db.collection("orders").doc(id).update({status}); await loadOrders(); renderDashboard(); };
+  const data = {
+    name: document.getElementById("pname").value.trim(),
+    price: Number(document.getElementById("pprice").value || 0),
+    category: document.getElementById("pcat").value.trim(),
+    imageUrl: document.getElementById("pimageurl").value.trim(),
+    description: document.getElementById("pdesc").value.trim(),
+    active: true,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
 
-async function loadSettings(){ const snap=await db.collection("store_settings").limit(1).get(); if(!snap.empty){ const d=snap.docs[0]; settingsId=d.id; const s=d.data(); storeName.value=s.store_name||"SHEIKOSHOP"; logoText.value=s.logo_text||"S"; heroTitle.value=s.hero_title||""; heroDesc.value=s.hero_description||""; waAdmin.value=s.whatsapp||""; } }
-window.saveSettings = async function(){ const payload={store_name:storeName.value.trim(), logo_text:logoText.value.trim()||"S", hero_title:heroTitle.value.trim(), hero_description:heroDesc.value.trim(), whatsapp:waAdmin.value.trim(), updated_at:new Date().toISOString()}; if(settingsId) await db.collection("store_settings").doc(settingsId).update(payload); else { const ref=await db.collection("store_settings").add(payload); settingsId=ref.id; } alert("Pengaturan berhasil disimpan."); };
-function renderDashboard(){ totalProduk.textContent=products.length; totalOrder.textContent=orders.length; pending.textContent=orders.filter(o=>o.status==="Menunggu Verifikasi").length; revenue.textContent=fmt(orders.filter(o=>o.status==="Selesai").reduce((s,o)=>s+Number(o.price||0),0)); }
+  if (!data.name) return alert("Nama produk wajib diisi");
+  if (!data.price) return alert("Harga produk wajib diisi");
+
+  const action = id
+    ? db.collection("products").doc(id).update(data)
+    : db.collection("products").add({
+        ...data,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+  action
+    .then(() => {
+      alert(id ? "Produk berhasil diupdate" : "Produk berhasil ditambahkan");
+      resetProductForm();
+    })
+    .catch(e => alert(e.message));
+}
+
+function loadProducts() {
+  db.collection("products").orderBy("createdAt", "desc").onSnapshot(snapshot => {
+    const rows = document.getElementById("productRows");
+    rows.innerHTML = "";
+
+    snapshot.forEach(doc => {
+      const p = doc.data();
+      const img = p.imageUrl
+        ? `<img src="${p.imageUrl}" style="width:55px;height:55px;object-fit:cover;border-radius:12px">`
+        : `<div style="width:55px;height:55px;border-radius:12px;background:#111827;display:flex;align-items:center;justify-content:center">📦</div>`;
+
+      rows.innerHTML += `
+        <tr>
+          <td>${img}</td>
+          <td>${p.name || "-"}</td>
+          <td>${p.category || "-"}</td>
+          <td>${rupiah(p.price)}</td>
+          <td>
+            <button class="btn ghost" onclick="editProduct('${doc.id}')">Edit</button>
+            <button class="btn ghost" onclick="deleteProduct('${doc.id}')">Hapus</button>
+          </td>
+        </tr>
+      `;
+    });
+
+    document.getElementById("totalProduk").innerText = snapshot.size;
+  });
+}
+
+function editProduct(id) {
+  db.collection("products").doc(id).get().then(doc => {
+    if (!doc.exists) return;
+
+    const p = doc.data();
+
+    document.getElementById("productId").value = doc.id;
+    document.getElementById("pname").value = p.name || "";
+    document.getElementById("pprice").value = p.price || "";
+    document.getElementById("pcat").value = p.category || "";
+    document.getElementById("pimageurl").value = p.imageUrl || "";
+    document.getElementById("pdesc").value = p.description || "";
+
+    document.getElementById("imagePreview").innerHTML = p.imageUrl
+      ? `<img src="${p.imageUrl}" style="width:130px;height:130px;object-fit:cover;border-radius:16px">`
+      : "";
+
+    show("produk");
+  });
+}
+
+function deleteProduct(id) {
+  if (!confirm("Yakin hapus produk ini?")) return;
+
+  db.collection("products").doc(id).delete()
+    .then(() => alert("Produk berhasil dihapus"))
+    .catch(e => alert(e.message));
+}
+
+/* PAYMENT */
+
+function savePayment() {
+  const id = document.getElementById("paymentId").value;
+
+  const data = {
+    name: document.getElementById("payName").value.trim(),
+    type: document.getElementById("payType").value,
+    accountName: document.getElementById("payAccountName").value.trim(),
+    accountNumber: document.getElementById("payAccountNumber").value.trim(),
+    description: document.getElementById("payDesc").value.trim(),
+    qrisUrl: document.getElementById("payQris").value.trim(),
+    active: true,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  if (!data.name) return alert("Nama payment wajib diisi");
+
+  const action = id
+    ? db.collection("payments").doc(id).update(data)
+    : db.collection("payments").add({
+        ...data,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+  action.then(() => alert("Payment berhasil disimpan"))
+    .catch(e => alert(e.message));
+}
+
+function loadPayments() {
+  db.collection("payments").orderBy("createdAt", "desc").onSnapshot(snapshot => {
+    const rows = document.getElementById("paymentRows");
+    rows.innerHTML = "";
+
+    snapshot.forEach(doc => {
+      const p = doc.data();
+      rows.innerHTML += `
+        <tr>
+          <td>${p.name || "-"}</td>
+          <td>${p.type || "-"}</td>
+          <td>${p.accountNumber || "-"}</td>
+          <td><button class="btn ghost" onclick="deletePayment('${doc.id}')">Hapus</button></td>
+        </tr>
+      `;
+    });
+  });
+}
+
+function deletePayment(id) {
+  if (!confirm("Yakin hapus payment ini?")) return;
+  db.collection("payments").doc(id).delete();
+}
+
+/* SETTINGS */
+
+function saveSettings() {
+  const data = {
+    storeName: document.getElementById("storeName").value.trim(),
+    logoText: document.getElementById("logoText").value.trim(),
+    heroTitle: document.getElementById("heroTitle").value.trim(),
+    heroDescription: document.getElementById("heroDesc").value.trim(),
+    waAdmin: document.getElementById("waAdmin").value.trim(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  db.collection("store_settings").doc("main").set(data, { merge: true })
+    .then(() => alert("Pengaturan berhasil disimpan"))
+    .catch(e => alert(e.message));
+}
+
+function loadSettings() {
+  db.collection("store_settings").doc("main").get().then(doc => {
+    if (!doc.exists) return;
+
+    const s = doc.data();
+    document.getElementById("storeName").value = s.storeName || "";
+    document.getElementById("logoText").value = s.logoText || "";
+    document.getElementById("heroTitle").value = s.heroTitle || "";
+    document.getElementById("heroDesc").value = s.heroDescription || "";
+    document.getElementById("waAdmin").value = s.waAdmin || "";
+  });
+}
+
+/* ORDERS */
+
+function loadOrders() {
+  db.collection("orders").orderBy("createdAt", "desc").onSnapshot(snapshot => {
+    const manage = document.getElementById("manageOrders");
+    const recent = document.getElementById("orderRows");
+
+    manage.innerHTML = "";
+    recent.innerHTML = "";
+
+    let total = 0;
+    let pending = 0;
+    let revenue = 0;
+
+    snapshot.forEach(doc => {
+      const o = doc.data();
+      total++;
+
+      if ((o.status || "pending") === "pending") pending++;
+      revenue += Number(o.total || 0);
+
+      recent.innerHTML += `
+        <tr>
+          <td>${o.customerName || "-"}</td>
+          <td>${o.productName || "-"}</td>
+          <td>${rupiah(o.total)}</td>
+          <td>${o.status || "pending"}</td>
+        </tr>
+      `;
+
+      manage.innerHTML += `
+        <div class="card" style="margin-bottom:12px">
+          <b>${o.customerName || "Customer"}</b><br>
+          Produk: ${o.productName || "-"}<br>
+          Total: ${rupiah(o.total)}<br>
+          Status: ${o.status || "pending"}<br><br>
+          <button class="btn ghost" onclick="updateOrderStatus('${doc.id}','pending')">Pending</button>
+          <button class="btn ghost" onclick="updateOrderStatus('${doc.id}','paid')">Paid</button>
+          <button class="btn ghost" onclick="updateOrderStatus('${doc.id}','done')">Done</button>
+          <button class="btn ghost" onclick="deleteOrder('${doc.id}')">Hapus</button>
+        </div>
+      `;
+    });
+
+    document.getElementById("totalOrder").innerText = total;
+    document.getElementById("pending").innerText = pending;
+    document.getElementById("revenue").innerText = rupiah(revenue);
+  });
+}
+
+function updateOrderStatus(id, status) {
+  db.collection("orders").doc(id).update({
+    status,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+function deleteOrder(id) {
+  if (!confirm("Yakin hapus pesanan?")) return;
+  db.collection("orders").doc(id).delete();
+}
