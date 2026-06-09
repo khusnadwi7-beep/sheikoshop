@@ -21,6 +21,13 @@
       <a href="#cara-order">Cara Order</a>
       <a href="#testimoni">Testimoni</a>
       <a href="#faq">FAQ</a>
+
+      <a href="#" id="cartMenu" onclick="showCart()">Keranjang</a>
+      <a href="#" id="ordersMenu" onclick="showMyOrders()">Pesanan Saya</a>
+
+      <a href="#" id="loginMenu" onclick="showLogin()">Login</a>
+      <a href="#" id="registerMenu" onclick="showRegister()">Daftar</a>
+      <a href="#" id="logoutMenu" onclick="logoutUser()" style="display:none;">Logout</a>
     </div>
   </nav>
 
@@ -76,6 +83,7 @@
   </footer>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="config.js"></script>
   <script src="app.js"></script>
