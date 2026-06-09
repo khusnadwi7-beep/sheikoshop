@@ -26,6 +26,7 @@
       <a onclick="show('produk')">Produk</a>
       <a onclick="show('pesanan')">Pesanan</a>
       <a onclick="show('payment')">Payment</a>
+      <a onclick="show('stok')">Stok Akun</a>
       <a onclick="show('setting')">Pengaturan Toko</a>
       <a href="../index.html">Lihat Website</a>
       <a onclick="logoutAdmin()">Logout</a>
@@ -100,6 +101,45 @@
       <div class="card" style="margin-top:18px">
         <h2>Daftar Payment</h2>
         <table><tbody id="paymentRows"></tbody></table>
+      </div>
+    </section>
+
+    <section id="stok" class="page hidden">
+      <div class="card">
+        <h2>Tambah Stok Akun</h2>
+
+        <div class="field">
+          <label>Pilih Produk</label>
+          <select id="stockProduct"></select>
+        </div>
+
+        <div class="field">
+          <label>Email Akun</label>
+          <input id="stockEmail" placeholder="akunnetflix@gmail.com">
+        </div>
+
+        <div class="field">
+          <label>Password Akun</label>
+          <input id="stockPassword" placeholder="password akun">
+        </div>
+
+        <button class="btn" onclick="saveAccountStock()">Simpan Stok Akun</button>
+      </div>
+
+      <div class="card" style="margin-top:18px">
+        <h2>Daftar Stok Akun</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Produk</th>
+              <th>Email</th>
+              <th>Password</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="stockRows"></tbody>
+        </table>
       </div>
     </section>
 
