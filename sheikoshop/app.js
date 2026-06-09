@@ -32,6 +32,14 @@ function waNumber() {
   return String(storeSettings.waAdmin || "").replace(/\D/g, "");
 }
 
+function normalizeText(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function closeModal() {
   const modal = document.getElementById("modal");
   modal.classList.remove("show");
@@ -264,7 +272,7 @@ function renderProducts(products) {
   wrap.innerHTML = "";
 
   if (!products.length) {
-    wrap.innerHTML = `<p class="muted">Produk belum tersedia.</p>`;
+    wrap.innerHTML = `<p class="muted">Produk tidak ditemukan.</p>`;
     return;
   }
 
@@ -320,13 +328,29 @@ function filterCategory(category, btn) {
 }
 
 function searchProducts(keyword) {
-  const q = String(keyword || "").toLowerCase();
+  const q = normalizeText(keyword);
 
-  const result = allProducts.filter(p =>
-    String(p.name || "").toLowerCase().includes(q) ||
-    String(p.category || "").toLowerCase().includes(q) ||
-    String(p.description || "").toLowerCase().includes(q)
-  );
+  if (!q) {
+    renderProducts(allProducts);
+    return;
+  }
+
+  const words = q.split(" ").filter(Boolean);
+
+  const result = allProducts.filter(p => {
+    const productText = normalizeText([
+      p.name,
+      p.category,
+      p.description,
+      p.type,
+      p.brand,
+      p.keyword,
+      p.keywords,
+      p.tags
+    ].join(" "));
+
+    return words.every(word => productText.includes(word));
+  });
 
   renderProducts(result);
 }
