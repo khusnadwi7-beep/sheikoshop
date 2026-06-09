@@ -24,6 +24,7 @@ function show(id) {
   document.getElementById(id).classList.remove("hidden");
 
   document.querySelectorAll(".menu a").forEach(a => a.classList.remove("active"));
+
   document.getElementById("pageTitle").innerText =
     id === "produk" ? "Produk" :
     id === "pesanan" ? "Pesanan" :
@@ -93,7 +94,7 @@ function saveProduct() {
     imageUrl: document.getElementById("pimageurl").value.trim(),
     description: document.getElementById("pdesc").value.trim(),
     active: true,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    updatedAt: new Date()
   };
 
   if (!data.name) return alert("Nama produk wajib diisi");
@@ -103,7 +104,7 @@ function saveProduct() {
     ? db.collection("products").doc(id).update(data)
     : db.collection("products").add({
         ...data,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: new Date()
       });
 
   action
@@ -120,7 +121,9 @@ function loadProducts() {
     const stockProduct = document.getElementById("stockProduct");
 
     rows.innerHTML = "";
-    if (stockProduct) stockProduct.innerHTML = `<option value="">-- Pilih Produk --</option>`;
+    if (stockProduct) {
+      stockProduct.innerHTML = `<option value="">-- Pilih Produk --</option>`;
+    }
 
     snapshot.forEach(doc => {
       const p = doc.data();
@@ -158,23 +161,30 @@ function loadProducts() {
 function editProduct(id) {
   db.collection("products").doc(id).get().then(doc => {
     if (!doc.exists) return;
+
     const p = doc.data();
+
     document.getElementById("productId").value = doc.id;
     document.getElementById("pname").value = p.name || "";
     document.getElementById("pprice").value = p.price || "";
     document.getElementById("pcat").value = p.category || "";
     document.getElementById("pimageurl").value = p.imageUrl || "";
     document.getElementById("pdesc").value = p.description || "";
+
     document.getElementById("imagePreview").innerHTML = p.imageUrl
       ? `<img src="${safeText(p.imageUrl)}" style="width:130px;height:130px;object-fit:cover;border-radius:16px">`
       : "";
+
     show("produk");
   });
 }
 
 function deleteProduct(id) {
   if (!confirm("Yakin hapus produk ini?")) return;
-  db.collection("products").doc(id).delete();
+
+  db.collection("products").doc(id).delete()
+    .then(() => alert("Produk berhasil dihapus"))
+    .catch(e => alert(e.message));
 }
 
 /* ---------- STOK AKUN ---------- */
@@ -199,8 +209,8 @@ function saveAccountStock() {
     email,
     password,
     status: "available",
-    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    createdAt: new Date(),
+    updatedAt: new Date()
   }).then(() => {
     alert("Stok akun berhasil ditambahkan");
     document.getElementById("stockEmail").value = "";
@@ -209,7 +219,6 @@ function saveAccountStock() {
 }
 
 function loadAccountStock() {
-  // Tampilkan semua akun termasuk yang sudah sold
   db.collection("account_stock")
     .orderBy("createdAt", "desc")
     .onSnapshot(snapshot => {
@@ -225,6 +234,7 @@ function loadAccountStock() {
 
       snapshot.forEach(doc => {
         const s = doc.data();
+
         rows.innerHTML += `
           <tr>
             <td>${safeText(s.productName || "-")}</td>
@@ -247,20 +257,23 @@ function markStockAvailable(id) {
     status: "available",
     soldAt: firebase.firestore.FieldValue.delete(),
     orderId: firebase.firestore.FieldValue.delete(),
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
+    updatedAt: new Date()
+  }).catch(e => alert(e.message));
 }
 
 function markStockSold(id) {
   db.collection("account_stock").doc(id).update({
     status: "sold",
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
+    updatedAt: new Date()
+  }).catch(e => alert(e.message));
 }
 
 function deleteAccountStock(id) {
   if (!confirm("Yakin hapus stok akun ini?")) return;
-  db.collection("account_stock").doc(id).delete();
+
+  db.collection("account_stock").doc(id).delete()
+    .then(() => alert("Stok akun berhasil dihapus"))
+    .catch(e => alert(e.message));
 }
 
 /* ---------- PAYMENT ---------- */
@@ -276,7 +289,7 @@ function savePayment() {
     description: document.getElementById("payDesc").value.trim(),
     qrisUrl: document.getElementById("payQris").value.trim(),
     active: true,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    updatedAt: new Date()
   };
 
   if (!data.name) return alert("Nama payment wajib diisi");
@@ -285,7 +298,7 @@ function savePayment() {
     ? db.collection("payments").doc(id).update(data)
     : db.collection("payments").add({
         ...data,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: new Date()
       });
 
   action.then(() => {
@@ -306,6 +319,7 @@ function loadPayments() {
 
     snapshot.forEach(doc => {
       const p = doc.data();
+
       rows.innerHTML += `
         <tr>
           <td>${safeText(p.name || "-")}</td>
@@ -320,7 +334,10 @@ function loadPayments() {
 
 function deletePayment(id) {
   if (!confirm("Yakin hapus payment ini?")) return;
-  db.collection("payments").doc(id).delete();
+
+  db.collection("payments").doc(id).delete()
+    .then(() => alert("Payment berhasil dihapus"))
+    .catch(e => alert(e.message));
 }
 
 /* ---------- SETTINGS ---------- */
@@ -332,7 +349,7 @@ function saveSettings() {
     heroTitle: document.getElementById("heroTitle").value.trim(),
     heroDescription: document.getElementById("heroDesc").value.trim(),
     waAdmin: document.getElementById("waAdmin").value.trim(),
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    updatedAt: new Date()
   };
 
   db.collection("store_settings").doc("main").set(data, { merge: true })
@@ -420,67 +437,74 @@ function loadOrders() {
 function updateOrderStatus(id, status) {
   db.collection("orders").doc(id).update({
     status,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    updatedAt: new Date()
   }).catch(e => alert(e.message));
 }
-
-/* ---------- KONFIRMASI PEMBAYARAN & KIRIM AKUN ---------- */
 
 function confirmOrderPaid(orderId) {
   const orderRef = db.collection("orders").doc(orderId);
 
-  db.runTransaction(async transaction => {
-    const orderDoc = await transaction.get(orderRef);
-
-    if (!orderDoc.exists) throw new Error("Order tidak ditemukan");
+  orderRef.get().then(orderDoc => {
+    if (!orderDoc.exists) {
+      throw new Error("Order tidak ditemukan");
+    }
 
     const order = orderDoc.data();
 
     if (order.accountStockId) {
-      transaction.update(orderRef, {
+      return orderRef.update({
         status: "paid",
-        paidAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      return "Order sudah punya akun. Status diubah ke paid.";
+        paidAt: new Date(),
+        updatedAt: new Date()
+      }).then(() => "Order sudah punya akun. Status diubah ke paid.");
     }
 
-    const stockQuery = db.collection("account_stock")
+    return db.collection("account_stock")
       .where("productId", "==", order.productId)
       .where("status", "==", "available")
-      .limit(1);
+      .limit(1)
+      .get()
+      .then(stockSnapshot => {
+        if (stockSnapshot.empty) {
+          throw new Error("Stok akun untuk produk ini habis");
+        }
 
-    const stockSnapshot = await transaction.get(stockQuery);
+        const stockDoc = stockSnapshot.docs[0];
+        const stock = stockDoc.data();
 
-    if (stockSnapshot.empty) throw new Error("Stok akun untuk produk ini habis");
+        const batch = db.batch();
 
-    const stockDoc = stockSnapshot.docs[0];
-    const stockRef = stockDoc.ref;
-    const stock = stockDoc.data();
+        batch.update(stockDoc.ref, {
+          status: "sold",
+          orderId: orderId,
+          soldAt: new Date(),
+          updatedAt: new Date()
+        });
 
-    // Status berubah sold tapi data tetap ada
-    transaction.update(stockRef, {
-      status: "sold",
-      orderId,
-      soldAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+        batch.update(orderRef, {
+          status: "paid",
+          accountStockId: stockDoc.id,
+          accountEmail: stock.email || "",
+          accountPassword: stock.password || "",
+          paidAt: new Date(),
+          updatedAt: new Date()
+        });
 
-    transaction.update(orderRef, {
-      status: "paid",
-      accountStockId: stockDoc.id,
-      accountEmail: stock.email || "",
-      accountPassword: stock.password || "",
-      paidAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    return "Pembayaran dikonfirmasi dan akun berhasil dikirim ke order.";
-  }).then(msg => alert(msg))
-    .catch(e => alert(e.message));
+        return batch.commit().then(() => {
+          return "Pembayaran dikonfirmasi dan akun berhasil dikirim ke order.";
+        });
+      });
+  }).then(msg => {
+    alert(msg);
+  }).catch(e => {
+    alert(e.message);
+  });
 }
 
 function deleteOrder(id) {
   if (!confirm("Yakin hapus pesanan?")) return;
-  db.collection("orders").doc(id).delete();
+
+  db.collection("orders").doc(id).delete()
+    .then(() => alert("Pesanan berhasil dihapus"))
+    .catch(e => alert(e.message));
 }
