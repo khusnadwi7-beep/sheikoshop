@@ -1,9 +1,12 @@
 firebase.initializeApp(window.firebaseConfig);
+
 const db = firebase.firestore();
+const auth = firebase.auth();
 
 let allProducts = [];
 let allPayments = [];
 let storeSettings = {};
+let currentUser = null;
 
 function rupiah(n) {
   return "Rp" + Number(n || 0).toLocaleString("id-ID");
@@ -18,6 +21,130 @@ function safeText(text) {
       '"': "&quot;"
     }[c];
   });
+}
+
+function closeModal() {
+  document.getElementById("modal").style.display = "none";
+}
+
+function openModal(html) {
+  document.getElementById("modalContent").innerHTML = html;
+  document.getElementById("modal").style.display = "flex";
+}
+
+function requireLogin() {
+  if (!currentUser) {
+    alert("Silakan login atau daftar terlebih dahulu sebelum membeli.");
+    showLogin();
+    return false;
+  }
+
+  return true;
+}
+
+function updateAuthMenu() {
+  const loginMenu = document.getElementById("loginMenu");
+  const registerMenu = document.getElementById("registerMenu");
+  const logoutMenu = document.getElementById("logoutMenu");
+  const cartMenu = document.getElementById("cartMenu");
+  const ordersMenu = document.getElementById("ordersMenu");
+
+  if (!loginMenu) return;
+
+  if (currentUser) {
+    loginMenu.style.display = "none";
+    registerMenu.style.display = "none";
+    logoutMenu.style.display = "inline-block";
+    cartMenu.style.display = "inline-block";
+    ordersMenu.style.display = "inline-block";
+  } else {
+    loginMenu.style.display = "inline-block";
+    registerMenu.style.display = "inline-block";
+    logoutMenu.style.display = "none";
+    cartMenu.style.display = "inline-block";
+    ordersMenu.style.display = "inline-block";
+  }
+}
+
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  updateAuthMenu();
+});
+
+function showRegister() {
+  openModal(`
+    <h2>Daftar Pembeli</h2>
+
+    <div class="field">
+      <label>Email</label>
+      <input id="registerEmail" type="email" placeholder="email@gmail.com">
+    </div>
+
+    <div class="field">
+      <label>Password</label>
+      <input id="registerPassword" type="password" placeholder="Minimal 6 karakter">
+    </div>
+
+    <button class="btn" onclick="registerUser()">Daftar</button>
+    <button class="btn ghost" onclick="showLogin()">Sudah punya akun? Login</button>
+    <button class="btn ghost" onclick="closeModal()">Tutup</button>
+  `);
+}
+
+function registerUser() {
+  const email = document.getElementById("registerEmail").value.trim();
+  const password = document.getElementById("registerPassword").value.trim();
+
+  if (!email) return alert("Email wajib diisi");
+  if (!password) return alert("Password wajib diisi");
+
+  auth.createUserWithEmailAndPassword(email, password)
+    .then(() => {
+      alert("Daftar berhasil. Kamu sudah login.");
+      closeModal();
+    })
+    .catch(e => alert(e.message));
+}
+
+function showLogin() {
+  openModal(`
+    <h2>Login Pembeli</h2>
+
+    <div class="field">
+      <label>Email</label>
+      <input id="loginEmail" type="email" placeholder="email@gmail.com">
+    </div>
+
+    <div class="field">
+      <label>Password</label>
+      <input id="loginPassword" type="password" placeholder="Password">
+    </div>
+
+    <button class="btn" onclick="loginUser()">Login</button>
+    <button class="btn ghost" onclick="showRegister()">Belum punya akun? Daftar</button>
+    <button class="btn ghost" onclick="closeModal()">Tutup</button>
+  `);
+}
+
+function loginUser() {
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value.trim();
+
+  if (!email) return alert("Email wajib diisi");
+  if (!password) return alert("Password wajib diisi");
+
+  auth.signInWithEmailAndPassword(email, password)
+    .then(() => {
+      alert("Login berhasil.");
+      closeModal();
+    })
+    .catch(e => alert(e.message));
+}
+
+function logoutUser() {
+  auth.signOut()
+    .then(() => alert("Logout berhasil."))
+    .catch(e => alert(e.message));
 }
 
 function loadSettings() {
@@ -91,6 +218,12 @@ function renderProducts(products) {
   }
 
   products.forEach(p => {
+    const stockText = Number(p.stock || 0) > 0
+      ? `<p class="muted">Stok: ${Number(p.stock || 0)}</p>`
+      : `<p class="muted">Stok habis</p>`;
+
+    const disabled = Number(p.stock || 0) <= 0 ? "disabled" : "";
+
     const image = p.imageUrl
       ? `<img src="${safeText(p.imageUrl)}" alt="${safeText(p.name)}" style="width:100%;height:160px;object-fit:cover;border-radius:18px;margin-bottom:14px;">`
       : `<div style="width:100%;height:160px;border-radius:18px;margin-bottom:14px;background:#111827;display:flex;align-items:center;justify-content:center;font-size:42px;">📦</div>`;
@@ -101,8 +234,10 @@ function renderProducts(products) {
         <div class="muted">${safeText(p.category || "Produk")}</div>
         <h3>${safeText(p.name)}</h3>
         <p>${safeText(p.description || "")}</p>
+        ${stockText}
         <div class="price">${rupiah(p.price)}</div>
-        <button class="btn" onclick="orderProduct('${p.id}')">Beli Sekarang</button>
+        <button class="btn" onclick="addToCart('${p.id}')" ${disabled}>Tambah Keranjang</button>
+        <button class="btn ghost" onclick="orderProduct('${p.id}')" ${disabled}>Beli Sekarang</button>
       </div>
     `;
   });
@@ -116,7 +251,7 @@ function renderCategories(products) {
 
   list.forEach(cat => {
     categories.innerHTML += `
-      <button class="tab ${cat === "Semua" ? "active" : ""}" onclick="filterCategory('${cat}', this)">
+      <button class="tab ${cat === "Semua" ? "active" : ""}" onclick="filterCategory('${safeText(cat)}', this)">
         ${safeText(cat)}
       </button>
     `;
@@ -205,17 +340,90 @@ function showPaymentDetail() {
   `;
 }
 
+function addToCart(id) {
+  if (!requireLogin()) return;
+
+  const p = allProducts.find(item => item.id === id);
+  if (!p) return alert("Produk tidak ditemukan");
+
+  if (Number(p.stock || 0) <= 0) {
+    return alert("Stok produk habis");
+  }
+
+  db.collection("carts").add({
+    userId: currentUser.uid,
+    userEmail: currentUser.email,
+    productId: p.id,
+    productName: p.name,
+    productPrice: Number(p.price || 0),
+    productImage: p.imageUrl || "",
+    qty: 1,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => {
+    alert("Produk berhasil masuk keranjang");
+  }).catch(e => alert(e.message));
+}
+
+function showCart() {
+  if (!requireLogin()) return;
+
+  db.collection("carts")
+    .where("userId", "==", currentUser.uid)
+    .get()
+    .then(snapshot => {
+      let html = `<h2>Keranjang Saya</h2>`;
+
+      if (snapshot.empty) {
+        html += `<p class="muted">Keranjang masih kosong.</p>`;
+      } else {
+        snapshot.forEach(doc => {
+          const item = doc.data();
+
+          html += `
+            <div class="paymentBox" style="padding:14px;border:1px solid #333;border-radius:14px;margin:12px 0;">
+              <h3>${safeText(item.productName)}</h3>
+              <p>Harga: ${rupiah(item.productPrice)}</p>
+              <button class="btn" onclick="orderProduct('${item.productId}')">Checkout</button>
+              <button class="btn ghost" onclick="removeCartItem('${doc.id}')">Hapus</button>
+            </div>
+          `;
+        });
+      }
+
+      html += `<button class="btn ghost" onclick="closeModal()">Tutup</button>`;
+      openModal(html);
+    })
+    .catch(e => alert(e.message));
+}
+
+function removeCartItem(cartId) {
+  db.collection("carts").doc(cartId).delete()
+    .then(() => {
+      alert("Produk dihapus dari keranjang");
+      showCart();
+    })
+    .catch(e => alert(e.message));
+}
+
 function orderProduct(id) {
+  if (!requireLogin()) return;
+
   const p = allProducts.find(item => item.id === id);
   if (!p) return;
 
-  const modal = document.getElementById("modal");
-  const box = document.getElementById("modalContent");
+  if (Number(p.stock || 0) <= 0) {
+    return alert("Stok produk habis");
+  }
 
-  box.innerHTML = `
+  openModal(`
     <h2>${safeText(p.name)}</h2>
     <p>${safeText(p.description || "")}</p>
     <h3>${rupiah(p.price)}</h3>
+
+    <div class="field">
+      <label>Email Akun</label>
+      <input value="${safeText(currentUser.email)}" disabled>
+    </div>
 
     <div class="field">
       <label>Nama Pembeli</label>
@@ -231,16 +439,12 @@ function orderProduct(id) {
 
     <button class="btn" onclick="submitOrder('${p.id}')">Kirim Pesanan</button>
     <button class="btn ghost" onclick="closeModal()">Tutup</button>
-  `;
-
-  modal.style.display = "flex";
-}
-
-function closeModal() {
-  document.getElementById("modal").style.display = "none";
+  `);
 }
 
 function submitOrder(id) {
+  if (!requireLogin()) return;
+
   const p = allProducts.find(item => item.id === id);
   if (!p) return;
 
@@ -255,21 +459,48 @@ function submitOrder(id) {
   if (!customerWa) return alert("Nomor WhatsApp wajib diisi");
   if (allPayments.length && !paymentId) return alert("Silakan pilih metode pembayaran");
 
-  db.collection("orders").add({
-    customerName,
-    customerWa,
-    productId: p.id,
-    productName: p.name,
-    total: Number(p.price || 0),
-    paymentId: payment ? payment.id : "",
-    paymentName: payment ? payment.name : "",
-    paymentType: payment ? payment.type : "",
-    paymentAccountName: payment ? payment.accountName : "",
-    paymentAccountNumber: payment ? payment.accountNumber : "",
-    status: "pending",
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(() => {
-    alert("Pesanan berhasil dikirim");
+  const productRef = db.collection("products").doc(p.id);
+
+  db.runTransaction(async transaction => {
+    const productDoc = await transaction.get(productRef);
+
+    if (!productDoc.exists) {
+      throw new Error("Produk tidak ditemukan");
+    }
+
+    const productData = productDoc.data();
+    const currentStock = Number(productData.stock || 0);
+
+    if (currentStock <= 0) {
+      throw new Error("Stok produk habis");
+    }
+
+    const orderRef = db.collection("orders").doc();
+
+    transaction.set(orderRef, {
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      customerName,
+      customerWa,
+      productId: p.id,
+      productName: p.name,
+      total: Number(p.price || 0),
+      paymentId: payment ? payment.id : "",
+      paymentName: payment ? payment.name : "",
+      paymentType: payment ? payment.type : "",
+      paymentAccountName: payment ? payment.accountName : "",
+      paymentAccountNumber: payment ? payment.accountNumber : "",
+      status: "pending",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    transaction.update(productRef, {
+      stock: firebase.firestore.FieldValue.increment(-1)
+    });
+
+    return orderRef.id;
+  }).then(orderId => {
+    alert("Pesanan berhasil dibuat. Stok otomatis berkurang.");
     closeModal();
 
     if (storeSettings.waAdmin) {
@@ -279,9 +510,11 @@ function submitOrder(id) {
 
       const text =
         `Halo admin Sheikoshop, saya ingin order:%0A%0A` +
+        `Order ID: ${orderId}%0A` +
         `Produk: ${p.name}%0A` +
         `Harga: ${rupiah(p.price)}%0A` +
         `Nama: ${customerName}%0A` +
+        `Email: ${currentUser.email}%0A` +
         `WA: ${customerWa}` +
         paymentText;
 
@@ -293,10 +526,45 @@ function submitOrder(id) {
   }).catch(e => alert(e.message));
 }
 
+function showMyOrders() {
+  if (!requireLogin()) return;
+
+  db.collection("orders")
+    .where("userId", "==", currentUser.uid)
+    .orderBy("createdAt", "desc")
+    .get()
+    .then(snapshot => {
+      let html = `<h2>Pesanan Saya</h2>`;
+
+      if (snapshot.empty) {
+        html += `<p class="muted">Belum ada pesanan.</p>`;
+      } else {
+        snapshot.forEach(doc => {
+          const order = doc.data();
+
+          html += `
+            <div class="paymentBox" style="padding:14px;border:1px solid #333;border-radius:14px;margin:12px 0;">
+              <h3>${safeText(order.productName)}</h3>
+              <p><b>Order ID:</b> ${doc.id}</p>
+              <p><b>Total:</b> ${rupiah(order.total)}</p>
+              <p><b>Status:</b> ${safeText(order.status || "pending")}</p>
+              <p><b>Pembayaran:</b> ${safeText(order.paymentName || "-")}</p>
+            </div>
+          `;
+        });
+      }
+
+      html += `<button class="btn ghost" onclick="closeModal()">Tutup</button>`;
+      openModal(html);
+    })
+    .catch(e => alert(e.message));
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   loadSettings();
   loadProducts();
   loadPayments();
+  updateAuthMenu();
 
   const searchInput = document.getElementById("searchInput");
   const heroSearchInput = document.getElementById("heroSearchInput");
