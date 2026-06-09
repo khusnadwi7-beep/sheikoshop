@@ -8,30 +8,73 @@
 </head>
 <body>
   <nav class="nav">
-    <div class="brand"><div class="logo" id="storeLogo">S</div><span id="storeName">SHEIKOSHOP</span></div>
+    <div class="brand">
+      <div class="logo" id="storeLogo">S</div>
+      <span id="storeName">SHEIKOSHOP</span>
+    </div>
+
     <input id="searchInput" class="search" placeholder="Cari aplikasi premium...">
+
     <div class="navlinks">
-      <a href="#">Beranda</a><a href="#produk">Produk</a><a href="#cara-order">Cara Order</a><a href="#testimoni">Testimoni</a><a href="#faq">FAQ</a><a class="btn ghost" href="admin/">Login</a><button class="btn">Daftar</button>
+      <a href="#">Beranda</a>
+      <a href="#produk">Produk</a>
+      <a href="#cara-order">Cara Order</a>
+      <a href="#testimoni">Testimoni</a>
+      <a href="#faq">FAQ</a>
     </div>
   </nav>
+
   <main class="container">
     <section class="hero">
       <div>
         <h1 id="heroTitle">Aplikasi Premium<br>Harga Terbaik, Aman & Terpercaya</h1>
         <p id="heroDescription">Nikmati berbagai aplikasi premium dengan harga terjangkau, proses cepat, dan aman 100%.</p>
-        <div class="heroSearch"><input id="heroSearchInput" placeholder="Cari aplikasi..."></div>
-        <div class="badges"><span>⚡ Fast Delivery</span><span>🛡 Garansi 30 Hari</span><span>✅ Aman 100%</span><span>💬 Support 24/7</span></div>
+        <div class="heroSearch">
+          <input id="heroSearchInput" placeholder="Cari aplikasi...">
+        </div>
+        <div class="badges">
+          <span>⚡ Fast Delivery</span>
+          <span>🛡 Garansi 30 Hari</span>
+          <span>✅ Aman 100%</span>
+          <span>💬 Support 24/7</span>
+        </div>
       </div>
-      <div class="appGrid"><div class="appIcon">Netflix</div><div class="appIcon">Spotify</div><div class="appIcon">YouTube</div><div class="appIcon">Disney+</div><div class="appIcon">Canva</div><div class="appIcon">ChatGPT</div></div>
+
+      <div class="appGrid">
+        <div class="appIcon">Netflix</div>
+        <div class="appIcon">Spotify</div>
+        <div class="appIcon">YouTube</div>
+        <div class="appIcon">Disney+</div>
+        <div class="appIcon">Canva</div>
+        <div class="appIcon">ChatGPT</div>
+      </div>
     </section>
+
     <h2 class="sectionTitle" id="produk">🔥 Produk Terlaris</h2>
     <div id="products" class="grid"></div>
+
     <h2 class="sectionTitle">Kategori</h2>
-    <div id="categories" class="tabs"><button class="tab active" data-category="Semua">Semua</button></div>
-    <section class="support"><div><h2>Butuh Bantuan?</h2><p class="muted">Chat kami di WhatsApp untuk respon cepat.</p></div><a id="whatsappLink" class="btn green" href="#" target="_blank">Chat WhatsApp</a></section>
+    <div id="categories" class="tabs">
+      <button class="tab active" data-category="Semua">Semua</button>
+    </div>
+
+    <section class="support">
+      <div>
+        <h2>Butuh Bantuan?</h2>
+        <p class="muted">Chat kami di WhatsApp untuk respon cepat.</p>
+      </div>
+      <a id="whatsappLink" class="btn green" href="#" target="_blank">Chat WhatsApp</a>
+    </section>
   </main>
-  <div id="modal" class="modal"><div id="modalContent" class="modalBox"></div></div>
-  <footer class="footer">© 2026 <span id="footerStoreName">Sheikoshop</span>. All rights reserved.</footer>
+
+  <div id="modal" class="modal">
+    <div id="modalContent" class="modalBox"></div>
+  </div>
+
+  <footer class="footer">
+    © 2026 <span id="footerStoreName">Sheikoshop</span>. All rights reserved.
+  </footer>
+
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script src="config.js"></script>
