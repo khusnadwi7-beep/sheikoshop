@@ -3,12 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Sheikoshop</title>
+  <title>SheikoShop - Aplikasi Premium Terpercaya</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+
+  <div class="bgGlow bgGlowOne"></div>
+  <div class="bgGlow bgGlowTwo"></div>
+
   <nav class="nav">
-    <div class="brand">
+    <div class="brand" onclick="scrollToSection('home')">
       <div class="logo" id="storeLogo">S</div>
       <span id="storeName">SHEIKOSHOP</span>
     </div>
@@ -16,7 +20,7 @@
     <input id="searchInput" class="search" placeholder="Cari aplikasi premium...">
 
     <div class="navlinks">
-      <a href="#">Beranda</a>
+      <a href="#home">Beranda</a>
       <a href="#produk">Produk</a>
       <a href="#cara-order">Cara Order</a>
       <a href="#testimoni">Testimoni</a>
@@ -31,55 +35,206 @@
     </div>
   </nav>
 
-  <main class="container">
+  <main class="container" id="home">
+
     <section class="hero">
-      <div>
-        <h1 id="heroTitle">Aplikasi Premium<br>Harga Terbaik, Aman & Terpercaya</h1>
-        <p id="heroDescription">Nikmati berbagai aplikasi premium dengan harga terjangkau, proses cepat, dan aman 100%.</p>
-        <div class="heroSearch">
-          <input id="heroSearchInput" placeholder="Cari aplikasi...">
+      <div class="heroContent">
+        <div class="eyebrow">Premium Digital Store</div>
+
+        <h1 id="heroTitle">
+          Aplikasi Premium<br>
+          Harga Terbaik, Aman & Terpercaya
+        </h1>
+
+        <p id="heroDescription">
+          Nikmati berbagai aplikasi premium dengan harga terjangkau, proses cepat,
+          pembayaran mudah, dan akun otomatis terkirim setelah konfirmasi admin.
+        </p>
+
+        <div class="heroActions">
+          <button class="btn big" onclick="scrollToSection('produk')">Lihat Produk</button>
+          <button class="btn ghost big" onclick="scrollToSection('cara-order')">Cara Order</button>
         </div>
+
+        <div class="heroSearch">
+          <input id="heroSearchInput" placeholder="Cari Netflix, Spotify, Canva, YouTube...">
+        </div>
+
         <div class="badges">
           <span>⚡ Fast Delivery</span>
-          <span>🛡 Garansi 30 Hari</span>
-          <span>✅ Aman 100%</span>
-          <span>💬 Support 24/7</span>
+          <span>🛡 Garansi Aman</span>
+          <span>✅ Stok Otomatis</span>
+          <span>💬 Support WhatsApp</span>
         </div>
       </div>
 
-      <div class="appGrid">
-        <div class="appIcon">Netflix</div>
-        <div class="appIcon">Spotify</div>
-        <div class="appIcon">YouTube</div>
-        <div class="appIcon">Disney+</div>
-        <div class="appIcon">Canva</div>
-        <div class="appIcon">ChatGPT</div>
+      <div class="heroVisual">
+        <div class="floatingCard mainHeroCard">
+          <div class="heroCardTop">
+            <div>
+              <small>Order Flow</small>
+              <h3>Instant Premium Access</h3>
+            </div>
+            <span class="liveBadge">LIVE</span>
+          </div>
+
+          <div class="miniTimeline">
+            <div class="miniStep active">Checkout</div>
+            <div class="miniStep active">Payment</div>
+            <div class="miniStep">Admin Verify</div>
+            <div class="miniStep">Account Sent</div>
+          </div>
+        </div>
+
+        <div class="appGrid">
+          <div class="appIcon">Netflix</div>
+          <div class="appIcon">Spotify</div>
+          <div class="appIcon">YouTube</div>
+          <div class="appIcon">Disney+</div>
+          <div class="appIcon">Canva</div>
+          <div class="appIcon">ChatGPT</div>
+        </div>
       </div>
     </section>
 
-    <h2 class="sectionTitle" id="produk">🔥 Produk Terlaris</h2>
-    <div id="products" class="grid"></div>
+    <section class="statsSection">
+      <div class="statCard">
+        <b>24/7</b>
+        <span>Support</span>
+      </div>
+      <div class="statCard">
+        <b>Auto</b>
+        <span>Account Stock</span>
+      </div>
+      <div class="statCard">
+        <b>100%</b>
+        <span>Aman</span>
+      </div>
+      <div class="statCard">
+        <b>Fast</b>
+        <span>Checkout</span>
+      </div>
+    </section>
 
-    <h2 class="sectionTitle">Kategori</h2>
-    <div id="categories" class="tabs">
-      <button class="tab active" data-category="Semua">Semua</button>
-    </div>
+    <section id="produk">
+      <div class="sectionHead">
+        <div>
+          <h2 class="sectionTitle">🔥 Produk Terlaris</h2>
+          <p class="muted">Pilih aplikasi premium favorit kamu.</p>
+        </div>
+      </div>
+
+      <div id="categories" class="tabs">
+        <button class="tab active" data-category="Semua">Semua</button>
+      </div>
+
+      <div id="products" class="grid"></div>
+    </section>
+
+    <section id="cara-order" class="howOrderSection">
+      <div class="sectionHead center">
+        <div>
+          <div class="eyebrow">Simple Checkout</div>
+          <h2 class="sectionTitle">🚀 Cara Order</h2>
+          <p class="muted">
+            Ikuti langkah sederhana ini. Setelah admin konfirmasi, akun premium akan muncul di menu Pesanan Saya.
+          </p>
+        </div>
+      </div>
+
+      <div class="stepGrid">
+        <button class="stepCard active" onclick="activateOrderStep(this)">
+          <div class="stepNumber">01</div>
+          <h3>Daftar Akun</h3>
+          <p>Buat akun pembeli menggunakan email dan password.</p>
+        </button>
+
+        <button class="stepCard" onclick="activateOrderStep(this)">
+          <div class="stepNumber">02</div>
+          <h3>Login Pembeli</h3>
+          <p>Masuk ke akun untuk mulai berbelanja.</p>
+        </button>
+
+        <button class="stepCard" onclick="activateOrderStep(this)">
+          <div class="stepNumber">03</div>
+          <h3>Pilih Produk</h3>
+          <p>Tambah ke keranjang atau beli langsung.</p>
+        </button>
+
+        <button class="stepCard" onclick="activateOrderStep(this)">
+          <div class="stepNumber">04</div>
+          <h3>Checkout</h3>
+          <p>Isi nama, WhatsApp, dan pilih metode pembayaran.</p>
+        </button>
+
+        <button class="stepCard" onclick="activateOrderStep(this)">
+          <div class="stepNumber">05</div>
+          <h3>Kirim Bukti Transfer</h3>
+          <p>Kirim bukti transfer langsung ke WhatsApp admin.</p>
+        </button>
+
+        <button class="stepCard" onclick="activateOrderStep(this)">
+          <div class="stepNumber">06</div>
+          <h3>Akun Terkirim</h3>
+          <p>Setelah dikonfirmasi, akun muncul otomatis di Pesanan Saya.</p>
+        </button>
+      </div>
+    </section>
+
+    <section id="testimoni" class="testimonialSection">
+      <div class="sectionHead">
+        <div>
+          <h2 class="sectionTitle">⭐ Testimoni Pelanggan</h2>
+          <p class="muted">Rating dan review dari pembeli setelah pesanan selesai.</p>
+        </div>
+      </div>
+
+      <div id="testimonialList" class="testimonialGrid"></div>
+    </section>
+
+    <section id="faq" class="faqSection">
+      <div class="sectionHead center">
+        <div>
+          <h2 class="sectionTitle">FAQ</h2>
+          <p class="muted">Pertanyaan yang sering ditanyakan.</p>
+        </div>
+      </div>
+
+      <div class="faqGrid">
+        <div class="faqCard">
+          <h3>Bagaimana akun dikirim?</h3>
+          <p>Akun akan muncul otomatis di Pesanan Saya setelah admin mengonfirmasi pembayaran.</p>
+        </div>
+
+        <div class="faqCard">
+          <h3>Bagaimana kirim bukti transfer?</h3>
+          <p>Buka Pesanan Saya, lalu klik tombol WhatsApp Kirim Bukti Transfer.</p>
+        </div>
+
+        <div class="faqCard">
+          <h3>Apakah bisa memberi rating?</h3>
+          <p>Bisa. Setelah pesanan selesai, tombol rating akan muncul di detail pesanan.</p>
+        </div>
+      </div>
+    </section>
 
     <section class="support">
       <div>
         <h2>Butuh Bantuan?</h2>
-        <p class="muted">Chat kami di WhatsApp untuk respon cepat.</p>
+        <p class="muted">Chat admin SheikoShop di WhatsApp untuk respon cepat.</p>
       </div>
       <a id="whatsappLink" class="btn green" href="#" target="_blank">Chat WhatsApp</a>
     </section>
   </main>
+
+  <a id="floatingWa" class="floatingWa" href="#" target="_blank">💬</a>
 
   <div id="modal" class="modal">
     <div id="modalContent" class="modalBox"></div>
   </div>
 
   <footer class="footer">
-    © 2026 <span id="footerStoreName">Sheikoshop</span>. All rights reserved.
+    © 2026 <span id="footerStoreName">SheikoShop</span>. All rights reserved.
   </footer>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
