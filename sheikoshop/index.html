@@ -1,23 +1,37 @@
-const db = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
-const fmt = n => "Rp" + Number(n || 0).toLocaleString("id-ID");
-let products=[], orders=[], payments=[], settings=null;
-function show(id){document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));document.querySelector("#"+id)?.classList.remove("hidden");document.querySelectorAll(".menu a").forEach(a=>a.classList.remove("active"));const menu=Array.from(document.querySelectorAll(".menu a")).find(a=>a.getAttribute("onclick")?.includes("'"+id+"'"));if(menu){menu.classList.add("active");pageTitle.textContent=menu.textContent.trim();}}
-async function loadAll(){await loadProducts();await loadOrders();await loadPayments();await loadSettings();renderDashboard();}
-async function loadProducts(){const {data,error}=await db.from("products").select("*").order("created_at",{ascending:false});if(error)return alert("Produk error: "+error.message);products=data||[];renderProducts();renderDashboard();}
-function renderProducts(){productRows.innerHTML=products.length?products.map(p=>`<tr><td>${p.name||"-"}</td><td>${p.category||"-"}</td><td>${fmt(p.price)}</td><td><button class="btn ghost" onclick="editProduct('${p.id}')">Edit</button><button class="btn ghost" onclick="deleteProduct('${p.id}')">Hapus</button></td></tr>`).join(""):`<tr><td colspan="4">Belum ada produk</td></tr>`;}
-async function saveProduct(){const payload={name:pname.value.trim(),price:Number(pprice.value||0),category:pcat.value.trim(),icon:picon.value.trim()||"APP",description:pdesc.value.trim(),short_text:"Akun Premium • Garansi",rating:5,sold:0,is_active:true};if(!payload.name||!payload.price)return alert("Nama dan harga wajib diisi.");const id=productId.value;const result=id?await db.from("products").update(payload).eq("id",id):await db.from("products").insert(payload);if(result.error)return alert("Gagal simpan produk: "+result.error.message);resetProductForm();await loadProducts();alert("Produk berhasil disimpan.");}
-function editProduct(id){const p=products.find(x=>String(x.id)===String(id));if(!p)return;productId.value=p.id;pname.value=p.name||"";pprice.value=p.price||"";pcat.value=p.category||"";picon.value=p.icon||"";pdesc.value=p.description||"";show("produk");}
-function resetProductForm(){productId.value="";pname.value="";pprice.value="";pcat.value="";picon.value="";pdesc.value="";}
-async function deleteProduct(id){if(!confirm("Hapus produk ini?"))return;const {error}=await db.from("products").delete().eq("id",id);if(error)return alert("Gagal hapus produk: "+error.message);await loadProducts();}
-async function loadOrders(){const {data,error}=await db.from("orders").select("*").order("created_at",{ascending:false});if(error){console.warn(error.message);orders=[];return;}orders=data||[];renderOrders();renderDashboard();}
-function renderOrders(){orderRows.innerHTML=orders.length?orders.slice(0,5).map(o=>`<tr><td>${o.invoice||"-"}</td><td>${o.product_name||"-"}</td><td>${o.status||"-"}</td><td>${fmt(o.price)}</td></tr>`).join(""):`<tr><td>Belum ada order</td></tr>`;manageOrders.innerHTML=orders.length?orders.map(o=>`<div class="card" style="margin-bottom:14px"><h3>${o.invoice||"-"}</h3><p><b>Produk:</b> ${o.product_name||"-"}</p><p><b>Pembeli:</b> ${o.buyer_name||"-"}</p><p><b>Kontak:</b> ${o.buyer_contact||"-"}</p><p><b>Total:</b> ${fmt(o.price)}</p><p><b>Status:</b> ${o.status||"-"}</p>${o.proof_url?`<a class="btn ghost" href="${o.proof_url}" target="_blank">Lihat Bukti</a>`:""}<button class="btn" onclick="updateOrder('${o.id}','Selesai')">Approve</button><button class="btn ghost" onclick="updateOrder('${o.id}','Ditolak')">Reject</button></div>`).join(""):`<div class="card">Belum ada pesanan.</div>`;}
-async function updateOrder(id,status){const {error}=await db.from("orders").update({status}).eq("id",id);if(error)return alert("Gagal update order: "+error.message);await loadOrders();}
-async function loadPayments(){const {data,error}=await db.from("payment_methods").select("*").order("created_at",{ascending:false});if(error){console.warn(error.message);payments=[];return;}payments=data||[];renderPayments();}
-function renderPayments(){paymentRows.innerHTML=payments.length?payments.map(p=>`<tr><td>${p.name||"-"}</td><td>${p.type||"-"}</td><td>${p.account_number||"-"}</td><td><button class="btn ghost" onclick="editPayment('${p.id}')">Edit</button><button class="btn ghost" onclick="deletePayment('${p.id}')">Hapus</button></td></tr>`).join(""):`<tr><td colspan="4">Belum ada payment.</td></tr>`;}
-async function savePayment(){const id=paymentId.value;const payload={name:payName.value.trim(),type:payType.value,account_name:payAccountName.value.trim(),account_number:payAccountNumber.value.trim(),description:payDesc.value.trim(),qris_url:payQris.value.trim(),is_active:true};if(!payload.name)return alert("Nama payment wajib diisi.");const result=id?await db.from("payment_methods").update(payload).eq("id",id):await db.from("payment_methods").insert(payload);if(result.error)return alert("Gagal simpan payment: "+result.error.message);paymentId.value="";payName.value="";payAccountName.value="";payAccountNumber.value="";payDesc.value="";payQris.value="";await loadPayments();alert("Payment berhasil disimpan.");}
-function editPayment(id){const p=payments.find(x=>String(x.id)===String(id));if(!p)return;paymentId.value=p.id;payName.value=p.name||"";payType.value=p.type||"QRIS";payAccountName.value=p.account_name||"";payAccountNumber.value=p.account_number||"";payDesc.value=p.description||"";payQris.value=p.qris_url||"";show("payment");}
-async function deletePayment(id){if(!confirm("Hapus payment ini?"))return;const {error}=await db.from("payment_methods").delete().eq("id",id);if(error)return alert("Gagal hapus payment: "+error.message);await loadPayments();}
-async function loadSettings(){const {data,error}=await db.from("store_settings").select("*").limit(1).maybeSingle();if(error){console.warn(error.message);return;}settings=data||null;if(settings){storeName.value=settings.store_name||"SHEIKOSHOP";logoText.value=settings.logo_text||"S";heroTitle.value=settings.hero_title||"";heroDesc.value=settings.hero_description||"";waAdmin.value=settings.whatsapp||"";}}
-async function saveSettings(){const payload={store_name:storeName.value.trim(),logo_text:logoText.value.trim()||"S",hero_title:heroTitle.value.trim(),hero_description:heroDesc.value.trim(),whatsapp:waAdmin.value.trim()};const result=settings?.id?await db.from("store_settings").update(payload).eq("id",settings.id):await db.from("store_settings").insert(payload);if(result.error)return alert("Gagal simpan pengaturan: "+result.error.message);await loadSettings();alert("Pengaturan berhasil disimpan.");}
-function renderDashboard(){totalProduk.textContent=products.length;totalOrder.textContent=orders.length;pending.textContent=orders.filter(o=>o.status==="Menunggu Verifikasi").length;revenue.textContent=fmt(orders.filter(o=>o.status==="Selesai").reduce((s,o)=>s+Number(o.price||0),0));}
-document.addEventListener("DOMContentLoaded",loadAll);
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sheikoshop</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav class="nav">
+  <div class="brand"><div class="logo" id="storeLogo">S</div><span id="storeName">SHEIKOSHOP</span></div>
+  <input id="searchInput" class="search" placeholder="Cari aplikasi premium...">
+  <div class="navlinks"><a>Beranda</a><a href="#produk">Produk</a><a>Cara Order</a><a>Testimoni</a><a>FAQ</a><a class="btn ghost" href="admin/">Login</a><button class="btn">Daftar</button></div>
+</nav>
+<main class="container">
+  <section class="hero">
+    <div>
+      <h1 id="heroTitle">Aplikasi Premium<br>Harga Terbaik, Aman & Terpercaya</h1>
+      <p id="heroDescription">Nikmati berbagai aplikasi premium dengan harga terjangkau, proses cepat, dan aman 100%.</p>
+      <div class="heroSearch"><input id="heroSearchInput" placeholder="Cari aplikasi..."></div>
+      <div class="badges"><span>⚡ Fast Delivery</span><span>🛡 Garansi 30 Hari</span><span>✅ Aman 100%</span><span>💬 Support 24/7</span></div>
+    </div>
+    <div class="appGrid"><div class="appIcon">Netflix</div><div class="appIcon">Spotify</div><div class="appIcon">YouTube</div><div class="appIcon">Disney+</div><div class="appIcon">Canva</div><div class="appIcon">ChatGPT</div></div>
+  </section>
+  <h2 id="produk" class="sectionTitle">🔥 Produk Terlaris</h2>
+  <div id="products" class="grid"></div>
+  <h2 class="sectionTitle">Kategori</h2>
+  <div id="categories" class="tabs"><button class="tab active" data-category="Semua">Semua</button></div>
+  <section class="support"><div><h2>Butuh Bantuan?</h2><p class="muted">Chat kami di WhatsApp untuk respon cepat.</p></div><a id="whatsappLink" class="btn green" href="#" target="_blank">Chat WhatsApp</a></section>
+</main>
+<div id="modal" class="modal"><div id="modalContent" class="modalBox"></div></div>
+<footer class="footer">© 2026 <span id="footerStoreName">Sheikoshop</span>. All rights reserved.</footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
