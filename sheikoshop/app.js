@@ -7,6 +7,7 @@ let allProducts = [];
 let allPayments = [];
 let storeSettings = {};
 let currentUser = null;
+let productStocks = {};
 
 function rupiah(n) {
   return "Rp" + Number(n || 0).toLocaleString("id-ID");
@@ -38,7 +39,6 @@ function requireLogin() {
     showLogin();
     return false;
   }
-
   return true;
 }
 
@@ -46,8 +46,6 @@ function updateAuthMenu() {
   const loginMenu = document.getElementById("loginMenu");
   const registerMenu = document.getElementById("registerMenu");
   const logoutMenu = document.getElementById("logoutMenu");
-  const cartMenu = document.getElementById("cartMenu");
-  const ordersMenu = document.getElementById("ordersMenu");
 
   if (!loginMenu) return;
 
@@ -55,14 +53,10 @@ function updateAuthMenu() {
     loginMenu.style.display = "none";
     registerMenu.style.display = "none";
     logoutMenu.style.display = "inline-block";
-    cartMenu.style.display = "inline-block";
-    ordersMenu.style.display = "inline-block";
   } else {
     loginMenu.style.display = "inline-block";
     registerMenu.style.display = "inline-block";
     logoutMenu.style.display = "none";
-    cartMenu.style.display = "inline-block";
-    ordersMenu.style.display = "inline-block";
   }
 }
 
@@ -74,17 +68,8 @@ auth.onAuthStateChanged(user => {
 function showRegister() {
   openModal(`
     <h2>Daftar Pembeli</h2>
-
-    <div class="field">
-      <label>Email</label>
-      <input id="registerEmail" type="email" placeholder="email@gmail.com">
-    </div>
-
-    <div class="field">
-      <label>Password</label>
-      <input id="registerPassword" type="password" placeholder="Minimal 6 karakter">
-    </div>
-
+    <div class="field"><label>Email</label><input id="registerEmail" type="email"></div>
+    <div class="field"><label>Password</label><input id="registerPassword" type="password"></div>
     <button class="btn" onclick="registerUser()">Daftar</button>
     <button class="btn ghost" onclick="showLogin()">Sudah punya akun? Login</button>
     <button class="btn ghost" onclick="closeModal()">Tutup</button>
@@ -100,7 +85,7 @@ function registerUser() {
 
   auth.createUserWithEmailAndPassword(email, password)
     .then(() => {
-      alert("Daftar berhasil. Kamu sudah login.");
+      alert("Daftar berhasil.");
       closeModal();
     })
     .catch(e => alert(e.message));
@@ -109,17 +94,8 @@ function registerUser() {
 function showLogin() {
   openModal(`
     <h2>Login Pembeli</h2>
-
-    <div class="field">
-      <label>Email</label>
-      <input id="loginEmail" type="email" placeholder="email@gmail.com">
-    </div>
-
-    <div class="field">
-      <label>Password</label>
-      <input id="loginPassword" type="password" placeholder="Password">
-    </div>
-
+    <div class="field"><label>Email</label><input id="loginEmail" type="email"></div>
+    <div class="field"><label>Password</label><input id="loginPassword" type="password"></div>
     <button class="btn" onclick="loginUser()">Login</button>
     <button class="btn ghost" onclick="showRegister()">Belum punya akun? Daftar</button>
     <button class="btn ghost" onclick="closeModal()">Tutup</button>
@@ -168,8 +144,7 @@ function loadSettings() {
     }
 
     if (storeSettings.heroDescription) {
-      document.getElementById("heroDescription").innerText =
-        storeSettings.heroDescription;
+      document.getElementById("heroDescription").innerText = storeSettings.heroDescription;
     }
 
     if (storeSettings.waAdmin) {
@@ -195,6 +170,28 @@ function loadProducts() {
   });
 }
 
+function loadAccountStocks() {
+  db.collection("account_stock")
+    .where("status", "==", "available")
+    .onSnapshot(snapshot => {
+      productStocks = {};
+
+      snapshot.forEach(doc => {
+        const s = doc.data();
+
+        if (!s.productId) return;
+
+        if (!productStocks[s.productId]) {
+          productStocks[s.productId] = 0;
+        }
+
+        productStocks[s.productId]++;
+      });
+
+      renderProducts(allProducts);
+    });
+}
+
 function loadPayments() {
   db.collection("payments").where("active", "==", true).onSnapshot(snapshot => {
     allPayments = [];
@@ -218,11 +215,8 @@ function renderProducts(products) {
   }
 
   products.forEach(p => {
-    const stockText = Number(p.stock || 0) > 0
-      ? `<p class="muted">Stok: ${Number(p.stock || 0)}</p>`
-      : `<p class="muted">Stok habis</p>`;
-
-    const disabled = Number(p.stock || 0) <= 0 ? "disabled" : "";
+    const stock = productStocks[p.id] || 0;
+    const disabled = stock <= 0 ? "disabled" : "";
 
     const image = p.imageUrl
       ? `<img src="${safeText(p.imageUrl)}" alt="${safeText(p.name)}" style="width:100%;height:160px;object-fit:cover;border-radius:18px;margin-bottom:14px;">`
@@ -234,7 +228,7 @@ function renderProducts(products) {
         <div class="muted">${safeText(p.category || "Produk")}</div>
         <h3>${safeText(p.name)}</h3>
         <p>${safeText(p.description || "")}</p>
-        ${stockText}
+        <p class="muted">Stok: ${stock}</p>
         <div class="price">${rupiah(p.price)}</div>
         <button class="btn" onclick="addToCart('${p.id}')" ${disabled}>Tambah Keranjang</button>
         <button class="btn ghost" onclick="orderProduct('${p.id}')" ${disabled}>Beli Sekarang</button>
@@ -330,7 +324,6 @@ function showPaymentDetail() {
       <p><b>Nama Rekening:</b> ${safeText(pay.accountName || "-")}</p>
       <p><b>Nomor:</b> ${safeText(pay.accountNumber || "-")}</p>
       <p>${safeText(pay.description || "")}</p>
-
       ${
         pay.qrisUrl
           ? `<img src="${safeText(pay.qrisUrl)}" alt="QRIS" style="width:100%;max-width:260px;border-radius:16px;margin-top:10px;">`
@@ -346,9 +339,8 @@ function addToCart(id) {
   const p = allProducts.find(item => item.id === id);
   if (!p) return alert("Produk tidak ditemukan");
 
-  if (Number(p.stock || 0) <= 0) {
-    return alert("Stok produk habis");
-  }
+  const stock = productStocks[p.id] || 0;
+  if (stock <= 0) return alert("Stok produk habis");
 
   db.collection("carts").add({
     userId: currentUser.uid,
@@ -411,17 +403,17 @@ function orderProduct(id) {
   const p = allProducts.find(item => item.id === id);
   if (!p) return;
 
-  if (Number(p.stock || 0) <= 0) {
-    return alert("Stok produk habis");
-  }
+  const stock = productStocks[p.id] || 0;
+  if (stock <= 0) return alert("Stok produk habis");
 
   openModal(`
     <h2>${safeText(p.name)}</h2>
     <p>${safeText(p.description || "")}</p>
     <h3>${rupiah(p.price)}</h3>
+    <p class="muted">Stok tersedia: ${stock}</p>
 
     <div class="field">
-      <label>Email Akun</label>
+      <label>Email Akun Pembeli</label>
       <input value="${safeText(currentUser.email)}" disabled>
     </div>
 
@@ -448,6 +440,9 @@ function submitOrder(id) {
   const p = allProducts.find(item => item.id === id);
   if (!p) return;
 
+  const stock = productStocks[p.id] || 0;
+  if (stock <= 0) return alert("Stok produk habis");
+
   const customerName = document.getElementById("buyerName").value.trim();
   const customerWa = document.getElementById("buyerWa").value.trim();
 
@@ -459,48 +454,24 @@ function submitOrder(id) {
   if (!customerWa) return alert("Nomor WhatsApp wajib diisi");
   if (allPayments.length && !paymentId) return alert("Silakan pilih metode pembayaran");
 
-  const productRef = db.collection("products").doc(p.id);
+  db.collection("orders").add({
+    userId: currentUser.uid,
+    userEmail: currentUser.email,
+    customerName,
+    customerWa,
+    productId: p.id,
+    productName: p.name,
+    total: Number(p.price || 0),
+    paymentId: payment ? payment.id : "",
+    paymentName: payment ? payment.name : "",
+    paymentType: payment ? payment.type : "",
+    paymentAccountName: payment ? payment.accountName : "",
+    paymentAccountNumber: payment ? payment.accountNumber : "",
+    status: "pending",
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(orderRef => {
+    alert("Pesanan berhasil dibuat. Silakan lakukan pembayaran.");
 
-  db.runTransaction(async transaction => {
-    const productDoc = await transaction.get(productRef);
-
-    if (!productDoc.exists) {
-      throw new Error("Produk tidak ditemukan");
-    }
-
-    const productData = productDoc.data();
-    const currentStock = Number(productData.stock || 0);
-
-    if (currentStock <= 0) {
-      throw new Error("Stok produk habis");
-    }
-
-    const orderRef = db.collection("orders").doc();
-
-    transaction.set(orderRef, {
-      userId: currentUser.uid,
-      userEmail: currentUser.email,
-      customerName,
-      customerWa,
-      productId: p.id,
-      productName: p.name,
-      total: Number(p.price || 0),
-      paymentId: payment ? payment.id : "",
-      paymentName: payment ? payment.name : "",
-      paymentType: payment ? payment.type : "",
-      paymentAccountName: payment ? payment.accountName : "",
-      paymentAccountNumber: payment ? payment.accountNumber : "",
-      status: "pending",
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    transaction.update(productRef, {
-      stock: firebase.firestore.FieldValue.increment(-1)
-    });
-
-    return orderRef.id;
-  }).then(orderId => {
-    alert("Pesanan berhasil dibuat. Stok otomatis berkurang.");
     closeModal();
 
     if (storeSettings.waAdmin) {
@@ -510,7 +481,7 @@ function submitOrder(id) {
 
       const text =
         `Halo admin Sheikoshop, saya ingin order:%0A%0A` +
-        `Order ID: ${orderId}%0A` +
+        `Order ID: ${orderRef.id}%0A` +
         `Produk: ${p.name}%0A` +
         `Harga: ${rupiah(p.price)}%0A` +
         `Nama: ${customerName}%0A` +
@@ -549,6 +520,18 @@ function showMyOrders() {
               <p><b>Total:</b> ${rupiah(order.total)}</p>
               <p><b>Status:</b> ${safeText(order.status || "pending")}</p>
               <p><b>Pembayaran:</b> ${safeText(order.paymentName || "-")}</p>
+
+              ${
+                order.accountEmail
+                  ? `
+                    <div style="margin-top:12px;padding:12px;border:1px solid #333;border-radius:12px;">
+                      <b>Data Akun:</b>
+                      <p>Email: ${safeText(order.accountEmail)}</p>
+                      <p>Password: ${safeText(order.accountPassword || "-")}</p>
+                    </div>
+                  `
+                  : `<p class="muted">Akun akan muncul setelah pembayaran dikonfirmasi admin.</p>`
+              }
             </div>
           `;
         });
@@ -563,6 +546,7 @@ function showMyOrders() {
 document.addEventListener("DOMContentLoaded", () => {
   loadSettings();
   loadProducts();
+  loadAccountStocks();
   loadPayments();
   updateAuthMenu();
 
