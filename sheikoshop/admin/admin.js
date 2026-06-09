@@ -11,13 +11,27 @@ let payments = [];
 let settings = null;
 
 function show(id) {
-  document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
-  document.querySelector("#" + id).classList.remove("hidden");
+  document.querySelectorAll(".page").forEach(function (p) {
+    p.classList.add("hidden");
+  });
 
-  document.querySelectorAll(".menu a").forEach(a => a.classList.remove("active"));
-  event.target.classList.add("active");
+  const page = document.querySelector("#" + id);
+  if (page) {
+    page.classList.remove("hidden");
+  }
 
-  document.querySelector("#pageTitle").textContent = event.target.textContent;
+  document.querySelectorAll(".menu a").forEach(function (a) {
+    a.classList.remove("active");
+  });
+
+  const menu = Array.from(document.querySelectorAll(".menu a")).find(function (a) {
+    return a.getAttribute("onclick") && a.getAttribute("onclick").includes("'" + id + "'");
+  });
+
+  if (menu) {
+    menu.classList.add("active");
+    document.querySelector("#pageTitle").textContent = menu.textContent;
+  }
 }
 
 async function loadAll() {
