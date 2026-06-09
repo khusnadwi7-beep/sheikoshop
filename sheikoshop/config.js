@@ -1,2 +1,9 @@
-window.SUPABASE_URL = "https://rfluidvgdrtxiidibivt.supabase.co";
-window.SUPABASE_ANON_KEY = "sb_publishable_YsXecJLH_QopgQ6SHAS-DQ_N926dQul";
+window.firebaseConfig = {
+  apiKey: "AIzaSyCzVvFJm--2RKKi0D7fJ0Wt2hbpuJKpjaA",
+  authDomain: "sheikoshop-fb4ac.firebaseapp.com",
+  projectId: "sheikoshop-fb4ac",
+  storageBucket: "sheikoshop-fb4ac.firebasestorage.app",
+  messagingSenderId: "881220280455",
+  appId: "1:881220280455:web:ad395341c86a63f8cf9822",
+  measurementId: "G-Z8ZF5LN7G5"
+};
