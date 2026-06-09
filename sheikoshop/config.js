@@ -1,5 +1,5 @@
 window.firebaseConfig = {
-  apiKey: "AIzaSyCzVvFJm--2RKKi0D7fJ0Wt2hbpuJKpjaA",
+  apiKey: "AIzaSyCzVvFJJm-2RKKi0D7fJ0Wt2hbpuJKpjaA",
   authDomain: "sheikoshop-fb4ac.firebaseapp.com",
   projectId: "sheikoshop-fb4ac",
   storageBucket: "sheikoshop-fb4ac.firebasestorage.app",
