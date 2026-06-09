@@ -1,28 +1,41 @@
-firebase.initializeApp(window.FIREBASE_CONFIG);
-const auth = firebase.auth();
-const db = firebase.firestore();
-const fmt = n => "Rp" + Number(n || 0).toLocaleString("id-ID");
-let products=[], orders=[], payments=[], settings=null;
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-function show(id){document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));document.getElementById(id)?.classList.remove("hidden");document.querySelectorAll(".menu a").forEach(a=>a.classList.remove("active"));const m=[...document.querySelectorAll(".menu a")].find(a=>(a.getAttribute("onclick")||"").includes("'"+id+"'"));if(m){m.classList.add("active");pageTitle.textContent=m.textContent.trim();}}
-async function loginAdmin(){loginError.textContent="";try{const cred=await auth.signInWithEmailAndPassword(loginEmail.value.trim(),loginPassword.value);if(cred.user.email!==window.ADMIN_EMAIL){await auth.signOut();throw new Error("Email ini bukan admin.");}}catch(e){loginError.textContent=e.message;}}
-function logoutAdmin(){auth.signOut();}
-auth.onAuthStateChanged(async user=>{if(user && user.email===window.ADMIN_EMAIL){loginPage.style.display="none";adminApp.style.display="flex";await loadAll();}else{loginPage.style.display="flex";adminApp.style.display="none";}});
-async function loadAll(){await loadProducts();await loadOrders();await loadPayments();await loadSettings();renderDashboard();}
-async function loadProducts(){const s=await db.collection("products").get();products=s.docs.map(d=>({id:d.id,...d.data()}));renderProducts();renderDashboard();}
-function renderProducts(){productRows.innerHTML=products.length?products.map(p=>`<tr><td>${p.name||"-"}</td><td>${p.category||"-"}</td><td>${fmt(p.price)}</td><td><button class="btn ghost" onclick="editProduct('${p.id}')">Edit</button><button class="btn ghost" onclick="deleteProduct('${p.id}')">Hapus</button></td></tr>`).join(""):`<tr><td colspan="4">Belum ada produk</td></tr>`;}
-async function saveProduct(){const payload={name:pname.value.trim(),price:Number(pprice.value||0),category:pcat.value.trim(),icon:picon.value.trim()||"APP",description:pdesc.value.trim(),shortText:"Akun Premium • Garansi",rating:5,sold:0,active:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};if(!payload.name||!payload.price)return alert("Nama dan harga wajib diisi.");if(productId.value){await db.collection("products").doc(productId.value).update(payload);}else{payload.createdAt=firebase.firestore.FieldValue.serverTimestamp();await db.collection("products").add(payload);}resetProductForm();await loadProducts();alert("Produk berhasil disimpan.");}
-function editProduct(id){const p=products.find(x=>x.id===id);if(!p)return;productId.value=p.id;pname.value=p.name||"";pprice.value=p.price||"";pcat.value=p.category||"";picon.value=p.icon||"";pdesc.value=p.description||"";show("produk");}
-function resetProductForm(){productId.value="";pname.value="";pprice.value="";pcat.value="";picon.value="";pdesc.value="";}
-async function deleteProduct(id){if(!confirm("Hapus produk ini?"))return;await db.collection("products").doc(id).delete();await loadProducts();}
-async function loadOrders(){const s=await db.collection("orders").get();orders=s.docs.map(d=>({id:d.id,...d.data()}));renderOrders();renderDashboard();}
-function renderOrders(){orderRows.innerHTML=orders.length?orders.slice(0,5).map(o=>`<tr><td>${o.invoice||"-"}</td><td>${o.productName||"-"}</td><td>${o.status||"-"}</td><td>${fmt(o.price)}</td></tr>`).join(""):`<tr><td>Belum ada order</td></tr>`;manageOrders.innerHTML=orders.length?orders.map(o=>`<div class="card" style="margin-bottom:14px"><h3>${o.invoice||"-"}</h3><p><b>Produk:</b> ${o.productName||"-"}</p><p><b>Pembeli:</b> ${o.buyerName||"-"}</p><p><b>Kontak:</b> ${o.buyerContact||"-"}</p><p><b>Total:</b> ${fmt(o.price)}</p><p><b>Status:</b> ${o.status||"-"}</p><p><b>Bukti/Catatan:</b> ${o.proofText||"-"}</p><button class="btn" onclick="updateOrder('${o.id}','Selesai')">Approve</button><button class="btn ghost" onclick="updateOrder('${o.id}','Ditolak')">Reject</button></div>`).join(""):`<div class="card">Belum ada pesanan.</div>`;}
-async function updateOrder(id,status){await db.collection("orders").doc(id).update({status});await loadOrders();}
-async function loadPayments(){const s=await db.collection("payments").get();payments=s.docs.map(d=>({id:d.id,...d.data()}));renderPayments();}
-function renderPayments(){paymentRows.innerHTML=payments.length?payments.map(p=>`<tr><td>${p.name||"-"}</td><td>${p.type||"-"}</td><td>${p.accountNumber||"-"}</td><td><button class="btn ghost" onclick="editPayment('${p.id}')">Edit</button><button class="btn ghost" onclick="deletePayment('${p.id}')">Hapus</button></td></tr>`).join(""):`<tr><td colspan="4">Belum ada payment</td></tr>`;}
-async function savePayment(){const payload={name:payName.value.trim(),type:payType.value,accountName:payAccountName.value.trim(),accountNumber:payAccountNumber.value.trim(),description:payDesc.value.trim(),qrisUrl:payQris.value.trim(),active:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};if(!payload.name)return alert("Nama payment wajib diisi.");if(paymentId.value){await db.collection("payments").doc(paymentId.value).update(payload);}else{payload.createdAt=firebase.firestore.FieldValue.serverTimestamp();await db.collection("payments").add(payload);}paymentId.value="";payName.value="";payAccountName.value="";payAccountNumber.value="";payDesc.value="";payQris.value="";await loadPayments();alert("Payment berhasil disimpan.");}
-function editPayment(id){const p=payments.find(x=>x.id===id);if(!p)return;paymentId.value=p.id;payName.value=p.name||"";payType.value=p.type||"QRIS";payAccountName.value=p.accountName||"";payAccountNumber.value=p.accountNumber||"";payDesc.value=p.description||"";payQris.value=p.qrisUrl||"";show("payment");}
-async function deletePayment(id){if(!confirm("Hapus payment ini?"))return;await db.collection("payments").doc(id).delete();await loadPayments();}
-async function loadSettings(){const d=await db.collection("settings").doc("main").get();settings=d.exists?d.data():null;if(settings){storeName.value=settings.storeName||"SHEIKOSHOP";logoText.value=settings.logoText||"S";heroTitle.value=settings.heroTitle||"";heroDesc.value=settings.heroDescription||"";waAdmin.value=settings.whatsapp||"";}}
-async function saveSettings(){const payload={storeName:storeName.value.trim(),logoText:logoText.value.trim()||"S",heroTitle:heroTitle.value.trim(),heroDescription:heroDesc.value.trim(),whatsapp:waAdmin.value.trim(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()};await db.collection("settings").doc("main").set(payload,{merge:true});await loadSettings();alert("Pengaturan berhasil disimpan.");}
-function renderDashboard(){totalProduk.textContent=products.length;totalOrder.textContent=orders.length;pending.textContent=orders.filter(o=>o.status==="Menunggu Verifikasi").length;revenue.textContent=fmt(orders.filter(o=>o.status==="Selesai").reduce((s,o)=>s+Number(o.price||0),0));}
+const app = initializeApp(window.firebaseConfig);
+const auth = getAuth(app);
+
+window.loginAdmin = async function () {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    alert("Login berhasil");
+    location.reload();
+  } catch (err) {
+    alert("Login gagal: " + err.message);
+  }
+};
+
+window.logoutAdmin = async function () {
+  await signOut(auth);
+  location.reload();
+};
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    document.body.innerHTML = `
+      <h1>Dashboard Admin Sheikoshop</h1>
+      <p>Login sebagai: ${user.email}</p>
+      <button onclick="logoutAdmin()">Logout</button>
+      <hr>
+      <h2>Admin berhasil login</h2>
+      <p>Langkah berikutnya: aktifkan fitur produk, payment, order.</p>
+    `;
+  }
+});
