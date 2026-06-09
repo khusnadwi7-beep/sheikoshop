@@ -2,7 +2,9 @@ firebase.initializeApp(window.firebaseConfig);
 
 const auth = firebase.auth();
 const db = firebase.firestore();
+
 const ADMIN_EMAIL = "khusnadwi7@gmail.com";
+const DEFAULT_LOGO_URL = "https://i.ibb.co.com/vChVRRVP/logo-full-png.png";
 
 function rupiah(n) {
   return "Rp" + Number(n || 0).toLocaleString("id-ID");
@@ -17,20 +19,47 @@ function safeText(text) {
   })[c]);
 }
 
+function statusPill(status) {
+  const s = String(status || "pending").toLowerCase();
+
+  if (s === "paid" || s === "done") {
+    return `<span class="pill ok">${safeText(s)}</span>`;
+  }
+
+  if (s === "cancel" || s === "cancelled") {
+    return `<span class="pill bad">${safeText(s)}</span>`;
+  }
+
+  return `<span class="pill">${safeText(s)}</span>`;
+}
+
+function setActiveMenu(id) {
+  document.querySelectorAll(".menu a").forEach(a => {
+    a.classList.remove("active");
+
+    if (a.dataset.page === id) {
+      a.classList.add("active");
+    }
+  });
+}
+
 /* ---------- AUTH ---------- */
 
 function show(id) {
   document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
-  document.getElementById(id).classList.remove("hidden");
 
-  document.querySelectorAll(".menu a").forEach(a => a.classList.remove("active"));
+  const page = document.getElementById(id);
+  if (page) page.classList.remove("hidden");
+
+  setActiveMenu(id);
 
   document.getElementById("pageTitle").innerText =
     id === "produk" ? "Produk" :
     id === "pesanan" ? "Pesanan" :
     id === "payment" ? "Payment" :
     id === "stok" ? "Stok Akun" :
-    id === "setting" ? "Pengaturan Toko" : "Dashboard";
+    id === "review" ? "Review & Testimoni" :
+    id === "setting" ? "Pengaturan" : "Dashboard";
 }
 
 function loginAdmin() {
@@ -49,7 +78,9 @@ function loginAdmin() {
         err.innerText = "";
       }
     })
-    .catch(e => err.innerText = e.message);
+    .catch(e => {
+      err.innerText = e.message;
+    });
 }
 
 function logoutAdmin() {
@@ -59,13 +90,15 @@ function logoutAdmin() {
 auth.onAuthStateChanged(user => {
   if (user && user.email === ADMIN_EMAIL) {
     document.getElementById("loginPage").style.display = "none";
-    document.getElementById("adminApp").style.display = "flex";
+    document.getElementById("adminApp").style.display = "grid";
 
     loadProducts();
     loadPayments();
     loadOrders();
     loadSettings();
     loadAccountStock();
+    loadReviews();
+    show("dashboard");
   } else {
     document.getElementById("loginPage").style.display = "flex";
     document.getElementById("adminApp").style.display = "none";
@@ -74,12 +107,24 @@ auth.onAuthStateChanged(user => {
 
 /* ---------- PRODUK ---------- */
 
+function previewProductImage() {
+  const url = document.getElementById("pimageurl").value.trim();
+  const preview = document.getElementById("imagePreview");
+
+  if (!preview) return;
+
+  preview.innerHTML = url
+    ? `<img src="${safeText(url)}" alt="Preview Produk">`
+    : "";
+}
+
 function resetProductForm() {
   document.getElementById("productId").value = "";
   document.getElementById("pname").value = "";
   document.getElementById("pprice").value = "";
   document.getElementById("pcat").value = "";
   document.getElementById("pimageurl").value = "";
+  document.getElementById("pkeywords").value = "";
   document.getElementById("pdesc").value = "";
   document.getElementById("imagePreview").innerHTML = "";
 }
@@ -92,6 +137,7 @@ function saveProduct() {
     price: Number(document.getElementById("pprice").value || 0),
     category: document.getElementById("pcat").value.trim(),
     imageUrl: document.getElementById("pimageurl").value.trim(),
+    keywords: document.getElementById("pkeywords").value.trim(),
     description: document.getElementById("pdesc").value.trim(),
     active: true,
     updatedAt: new Date()
@@ -120,7 +166,10 @@ function loadProducts() {
     const rows = document.getElementById("productRows");
     const stockProduct = document.getElementById("stockProduct");
 
+    if (!rows) return;
+
     rows.innerHTML = "";
+
     if (stockProduct) {
       stockProduct.innerHTML = `<option value="">-- Pilih Produk --</option>`;
     }
@@ -137,13 +186,17 @@ function loadProducts() {
       }
 
       const img = p.imageUrl
-        ? `<img src="${safeText(p.imageUrl)}" style="width:55px;height:55px;object-fit:cover;border-radius:12px">`
-        : `<div style="width:55px;height:55px;border-radius:12px;background:#111827;display:flex;align-items:center;justify-content:center">📦</div>`;
+        ? `<img src="${safeText(p.imageUrl)}" style="width:56px;height:56px;object-fit:cover;border-radius:14px;border:1px solid #253047">`
+        : `<div style="width:56px;height:56px;border-radius:14px;background:#111827;display:flex;align-items:center;justify-content:center">📦</div>`;
 
       rows.innerHTML += `
         <tr>
           <td>${img}</td>
-          <td>${safeText(p.name || "-")}</td>
+          <td>
+            <b>${safeText(p.name || "-")}</b>
+            <br>
+            <span class="muted">${safeText(p.description || "").slice(0, 55)}</span>
+          </td>
           <td>${safeText(p.category || "-")}</td>
           <td>${rupiah(p.price)}</td>
           <td>
@@ -154,7 +207,8 @@ function loadProducts() {
       `;
     });
 
-    document.getElementById("totalProduk").innerText = snapshot.size;
+    const totalProduk = document.getElementById("totalProduk");
+    if (totalProduk) totalProduk.innerText = snapshot.size;
   });
 }
 
@@ -169,10 +223,11 @@ function editProduct(id) {
     document.getElementById("pprice").value = p.price || "";
     document.getElementById("pcat").value = p.category || "";
     document.getElementById("pimageurl").value = p.imageUrl || "";
+    document.getElementById("pkeywords").value = p.keywords || p.keyword || p.tags || "";
     document.getElementById("pdesc").value = p.description || "";
 
     document.getElementById("imagePreview").innerHTML = p.imageUrl
-      ? `<img src="${safeText(p.imageUrl)}" style="width:130px;height:130px;object-fit:cover;border-radius:16px">`
+      ? `<img src="${safeText(p.imageUrl)}" alt="Preview Produk">`
       : "";
 
     show("produk");
@@ -240,7 +295,7 @@ function loadAccountStock() {
             <td>${safeText(s.productName || "-")}</td>
             <td>${safeText(s.email || "-")}</td>
             <td>${safeText(s.password || "-")}</td>
-            <td>${safeText(s.status || "-")}</td>
+            <td>${statusPill(s.status || "-")}</td>
             <td>
               <button class="btn ghost" onclick="markStockAvailable('${doc.id}')">Available</button>
               <button class="btn ghost" onclick="markStockSold('${doc.id}')">Sold</button>
@@ -315,7 +370,14 @@ function savePayment() {
 function loadPayments() {
   db.collection("payments").orderBy("createdAt", "desc").onSnapshot(snapshot => {
     const rows = document.getElementById("paymentRows");
+    if (!rows) return;
+
     rows.innerHTML = "";
+
+    if (snapshot.empty) {
+      rows.innerHTML = `<tr><td colspan="4">Belum ada payment.</td></tr>`;
+      return;
+    }
 
     snapshot.forEach(doc => {
       const p = doc.data();
@@ -325,10 +387,31 @@ function loadPayments() {
           <td>${safeText(p.name || "-")}</td>
           <td>${safeText(p.type || "-")}</td>
           <td>${safeText(p.accountNumber || "-")}</td>
-          <td><button class="btn ghost" onclick="deletePayment('${doc.id}')">Hapus</button></td>
+          <td>
+            <button class="btn ghost" onclick="editPayment('${doc.id}')">Edit</button>
+            <button class="btn ghost" onclick="deletePayment('${doc.id}')">Hapus</button>
+          </td>
         </tr>
       `;
     });
+  });
+}
+
+function editPayment(id) {
+  db.collection("payments").doc(id).get().then(doc => {
+    if (!doc.exists) return;
+
+    const p = doc.data();
+
+    document.getElementById("paymentId").value = doc.id;
+    document.getElementById("payName").value = p.name || "";
+    document.getElementById("payType").value = p.type || "QRIS";
+    document.getElementById("payAccountName").value = p.accountName || "";
+    document.getElementById("payAccountNumber").value = p.accountNumber || "";
+    document.getElementById("payDesc").value = p.description || "";
+    document.getElementById("payQris").value = p.qrisUrl || "";
+
+    show("payment");
   });
 }
 
@@ -343,9 +426,12 @@ function deletePayment(id) {
 /* ---------- SETTINGS ---------- */
 
 function saveSettings() {
+  const logoUrlInput = document.getElementById("logoUrl");
+
   const data = {
     storeName: document.getElementById("storeName").value.trim(),
     logoText: document.getElementById("logoText").value.trim(),
+    logoUrl: logoUrlInput ? logoUrlInput.value.trim() : DEFAULT_LOGO_URL,
     heroTitle: document.getElementById("heroTitle").value.trim(),
     heroDescription: document.getElementById("heroDesc").value.trim(),
     waAdmin: document.getElementById("waAdmin").value.trim(),
@@ -359,14 +445,18 @@ function saveSettings() {
 
 function loadSettings() {
   db.collection("store_settings").doc("main").get().then(doc => {
-    if (!doc.exists) return;
+    const s = doc.exists ? doc.data() : {};
 
-    const s = doc.data();
-    document.getElementById("storeName").value = s.storeName || "";
-    document.getElementById("logoText").value = s.logoText || "";
+    document.getElementById("storeName").value = s.storeName || "SHEIKOSHOP";
+    document.getElementById("logoText").value = s.logoText || "S";
     document.getElementById("heroTitle").value = s.heroTitle || "";
     document.getElementById("heroDesc").value = s.heroDescription || "";
     document.getElementById("waAdmin").value = s.waAdmin || "";
+
+    const logoUrl = document.getElementById("logoUrl");
+    if (logoUrl) {
+      logoUrl.value = s.logoUrl || DEFAULT_LOGO_URL;
+    }
   });
 }
 
@@ -376,6 +466,9 @@ function loadOrders() {
   db.collection("orders").orderBy("createdAt", "desc").onSnapshot(snapshot => {
     const manage = document.getElementById("manageOrders");
     const recent = document.getElementById("orderRows");
+    const topProducts = document.getElementById("topProducts");
+
+    if (!manage || !recent) return;
 
     manage.innerHTML = "";
     recent.innerHTML = "";
@@ -383,47 +476,73 @@ function loadOrders() {
     let total = 0;
     let pending = 0;
     let revenue = 0;
+    const productMap = {};
+
+    if (snapshot.empty) {
+      recent.innerHTML = `<tr><td colspan="4">Belum ada pesanan.</td></tr>`;
+      manage.innerHTML = `<p class="muted">Belum ada pesanan.</p>`;
+    }
 
     snapshot.forEach(doc => {
       const o = doc.data();
       total++;
 
-      if ((o.status || "pending") === "pending") pending++;
+      const status = o.status || "pending";
 
-      if ((o.status || "") === "paid" || (o.status || "") === "done") {
+      if (status === "pending") pending++;
+
+      if (status === "paid" || status === "done") {
         revenue += Number(o.total || 0);
       }
 
+      const pname = o.productName || "Produk";
+      productMap[pname] = (productMap[pname] || 0) + 1;
+
       recent.innerHTML += `
         <tr>
-          <td>${safeText(o.customerName || "-")}</td>
+          <td>
+            <b>${safeText(o.customerName || "Customer")}</b>
+            <br>
+            <span class="muted">${safeText(o.userEmail || "-")}</span>
+          </td>
           <td>${safeText(o.productName || "-")}</td>
           <td>${rupiah(o.total)}</td>
-          <td>${safeText(o.status || "pending")}</td>
+          <td>${statusPill(status)}</td>
         </tr>
       `;
 
       manage.innerHTML += `
-        <div class="card" style="margin-bottom:12px">
-          <b>${safeText(o.customerName || "Customer")}</b><br>
-          Email User: ${safeText(o.userEmail || "-")}<br>
-          WA: ${safeText(o.customerWa || "-")}<br>
-          Produk: ${safeText(o.productName || "-")}<br>
-          Total: ${rupiah(o.total)}<br>
-          Payment: ${safeText(o.paymentName || "-")}<br>
-          Status: ${safeText(o.status || "pending")}<br>
+        <div class="orderCard">
+          <div class="orderCardTop">
+            <div>
+              <h3>${safeText(o.customerName || "Customer")}</h3>
+              <span class="muted">#${safeText(doc.id)}</span>
+            </div>
+            ${statusPill(status)}
+          </div>
 
-          ${
-            o.accountEmail
-              ? `<br><b>Akun Dikirim:</b><br>Email: ${safeText(o.accountEmail)}<br>Password: ${safeText(o.accountPassword || "-")}<br>`
-              : `<br><b>Akun Dikirim:</b> Belum ada<br>`
-          }
+          <div class="orderMeta">
+            <div>Email User: <b>${safeText(o.userEmail || "-")}</b></div>
+            <div>WhatsApp: <b>${safeText(o.customerWa || "-")}</b></div>
+            <div>Produk: <b>${safeText(o.productName || "-")}</b></div>
+            <div>Total: <b>${rupiah(o.total)}</b></div>
+            <div>Payment: <b>${safeText(o.paymentName || "-")}</b></div>
+            <div>
+              Akun:
+              ${
+                o.accountEmail
+                  ? `<b>${safeText(o.accountEmail)}</b> / <b>${safeText(o.accountPassword || "-")}</b>`
+                  : `<span class="muted">Belum dikirim</span>`
+              }
+            </div>
+          </div>
 
-          <br>
-          <button class="btn ghost" onclick="updateOrderStatus('${doc.id}','pending')">Pending</button>
-          <button class="btn ghost" onclick="confirmOrderPaid('${doc.id}')">Paid + Kirim Akun</button>
-          <button class="btn ghost" onclick="updateOrderStatus('${doc.id}','done')">Done</button>
-          <button class="btn ghost" onclick="deleteOrder('${doc.id}')">Hapus</button>
+          <div class="orderActions">
+            <button class="btn ghost" onclick="updateOrderStatus('${doc.id}','pending')">Pending</button>
+            <button class="btn green" onclick="confirmOrderPaid('${doc.id}')">Paid + Kirim Akun</button>
+            <button class="btn ghost" onclick="updateOrderStatus('${doc.id}','done')">Done</button>
+            <button class="btn red" onclick="deleteOrder('${doc.id}')">Hapus</button>
+          </div>
         </div>
       `;
     });
@@ -431,6 +550,26 @@ function loadOrders() {
     document.getElementById("totalOrder").innerText = total;
     document.getElementById("pending").innerText = pending;
     document.getElementById("revenue").innerText = rupiah(revenue);
+
+    if (topProducts) {
+      const sorted = Object.entries(productMap)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+      if (!sorted.length) {
+        topProducts.innerHTML = `<p class="muted">Belum ada data.</p>`;
+      } else {
+        topProducts.innerHTML = sorted.map((item, index) => `
+          <div class="topItem">
+            <div>
+              <b>${index + 1}. ${safeText(item[0])}</b>
+              <br>
+              <span>Terjual ${item[1]}</span>
+            </div>
+          </div>
+        `).join("");
+      }
+    }
   });
 }
 
@@ -506,5 +645,61 @@ function deleteOrder(id) {
 
   db.collection("orders").doc(id).delete()
     .then(() => alert("Pesanan berhasil dihapus"))
+    .catch(e => alert(e.message));
+}
+
+/* ---------- REVIEWS ---------- */
+
+function loadReviews() {
+  const wrap = document.getElementById("reviewRows");
+  if (!wrap) return;
+
+  db.collection("testimonials")
+    .orderBy("createdAt", "desc")
+    .onSnapshot(snapshot => {
+      wrap.innerHTML = "";
+
+      if (snapshot.empty) {
+        wrap.innerHTML = `<p class="muted">Belum ada review.</p>`;
+        return;
+      }
+
+      snapshot.forEach(doc => {
+        const r = doc.data();
+        const rating = Math.max(1, Math.min(5, Number(r.rating || 5)));
+
+        wrap.innerHTML += `
+          <div class="reviewCard">
+            <div class="reviewStars">${"★".repeat(rating)}</div>
+            <h3>${safeText(r.productName || "Produk")}</h3>
+            <p>${safeText(r.review || "")}</p>
+            <span class="muted">${safeText(r.userEmail || "-")}</span>
+
+            <div class="orderActions">
+              ${
+                r.active === false
+                  ? `<button class="btn green" onclick="setReviewActive('${doc.id}', true)">Tampilkan</button>`
+                  : `<button class="btn ghost" onclick="setReviewActive('${doc.id}', false)">Sembunyikan</button>`
+              }
+              <button class="btn red" onclick="deleteReview('${doc.id}')">Hapus</button>
+            </div>
+          </div>
+        `;
+      });
+    });
+}
+
+function setReviewActive(id, active) {
+  db.collection("testimonials").doc(id).update({
+    active,
+    updatedAt: new Date()
+  }).catch(e => alert(e.message));
+}
+
+function deleteReview(id) {
+  if (!confirm("Yakin hapus review ini?")) return;
+
+  db.collection("testimonials").doc(id).delete()
+    .then(() => alert("Review berhasil dihapus"))
     .catch(e => alert(e.message));
 }
