@@ -9,22 +9,21 @@ function rupiah(n) {
 }
 
 function safeText(text) {
-  return String(text || "").replace(/[<>&"]/g, function(c) {
-    return {
-      "<": "&lt;",
-      ">": "&gt;",
-      "&": "&amp;",
-      '"': "&quot;"
-    }[c];
-  });
+  return String(text || "").replace(/[<>&"]/g, c => ({
+    "<": "&lt;",
+    ">": "&gt;",
+    "&": "&amp;",
+    '"': "&quot;"
+  })[c]);
 }
+
+/* ---------- AUTH ---------- */
 
 function show(id) {
   document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
   document.getElementById(id).classList.remove("hidden");
 
   document.querySelectorAll(".menu a").forEach(a => a.classList.remove("active"));
-
   document.getElementById("pageTitle").innerText =
     id === "produk" ? "Produk" :
     id === "pesanan" ? "Pesanan" :
@@ -72,7 +71,7 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-/* PRODUK */
+/* ---------- PRODUK ---------- */
 
 function resetProductForm() {
   document.getElementById("productId").value = "";
@@ -121,9 +120,7 @@ function loadProducts() {
     const stockProduct = document.getElementById("stockProduct");
 
     rows.innerHTML = "";
-    if (stockProduct) {
-      stockProduct.innerHTML = `<option value="">-- Pilih Produk --</option>`;
-    }
+    if (stockProduct) stockProduct.innerHTML = `<option value="">-- Pilih Produk --</option>`;
 
     snapshot.forEach(doc => {
       const p = doc.data();
@@ -161,33 +158,26 @@ function loadProducts() {
 function editProduct(id) {
   db.collection("products").doc(id).get().then(doc => {
     if (!doc.exists) return;
-
     const p = doc.data();
-
     document.getElementById("productId").value = doc.id;
     document.getElementById("pname").value = p.name || "";
     document.getElementById("pprice").value = p.price || "";
     document.getElementById("pcat").value = p.category || "";
     document.getElementById("pimageurl").value = p.imageUrl || "";
     document.getElementById("pdesc").value = p.description || "";
-
     document.getElementById("imagePreview").innerHTML = p.imageUrl
       ? `<img src="${safeText(p.imageUrl)}" style="width:130px;height:130px;object-fit:cover;border-radius:16px">`
       : "";
-
     show("produk");
   });
 }
 
 function deleteProduct(id) {
   if (!confirm("Yakin hapus produk ini?")) return;
-
-  db.collection("products").doc(id).delete()
-    .then(() => alert("Produk berhasil dihapus"))
-    .catch(e => alert(e.message));
+  db.collection("products").doc(id).delete();
 }
 
-/* STOK AKUN */
+/* ---------- STOK AKUN ---------- */
 
 function saveAccountStock() {
   const productSelect = document.getElementById("stockProduct");
@@ -219,39 +209,37 @@ function saveAccountStock() {
 }
 
 function loadAccountStock() {
-  db.collection("account_stock").orderBy("createdAt", "desc").onSnapshot(snapshot => {
-    const rows = document.getElementById("stockRows");
-    if (!rows) return;
+  db.collection("account_stock")
+    .where("status", "==", "available")
+    .orderBy("createdAt", "desc")
+    .onSnapshot(snapshot => {
+      const rows = document.getElementById("stockRows");
+      if (!rows) return;
 
-    rows.innerHTML = "";
+      rows.innerHTML = "";
 
-    if (snapshot.empty) {
-      rows.innerHTML = `
-        <tr>
-          <td colspan="5">Belum ada stok akun.</td>
-        </tr>
-      `;
-      return;
-    }
+      if (snapshot.empty) {
+        rows.innerHTML = `<tr><td colspan="5">Belum ada stok akun.</td></tr>`;
+        return;
+      }
 
-    snapshot.forEach(doc => {
-      const s = doc.data();
-
-      rows.innerHTML += `
-        <tr>
-          <td>${safeText(s.productName || "-")}</td>
-          <td>${safeText(s.email || "-")}</td>
-          <td>${safeText(s.password || "-")}</td>
-          <td>${safeText(s.status || "-")}</td>
-          <td>
-            <button class="btn ghost" onclick="markStockAvailable('${doc.id}')">Available</button>
-            <button class="btn ghost" onclick="markStockSold('${doc.id}')">Sold</button>
-            <button class="btn ghost" onclick="deleteAccountStock('${doc.id}')">Hapus</button>
-          </td>
-        </tr>
-      `;
+      snapshot.forEach(doc => {
+        const s = doc.data();
+        rows.innerHTML += `
+          <tr>
+            <td>${safeText(s.productName || "-")}</td>
+            <td>${safeText(s.email || "-")}</td>
+            <td>${safeText(s.password || "-")}</td>
+            <td>${safeText(s.status || "-")}</td>
+            <td>
+              <button class="btn ghost" onclick="markStockAvailable('${doc.id}')">Available</button>
+              <button class="btn ghost" onclick="markStockSold('${doc.id}')">Sold</button>
+              <button class="btn ghost" onclick="deleteAccountStock('${doc.id}')">Hapus</button>
+            </td>
+          </tr>
+        `;
+      });
     });
-  });
 }
 
 function markStockAvailable(id) {
@@ -272,13 +260,10 @@ function markStockSold(id) {
 
 function deleteAccountStock(id) {
   if (!confirm("Yakin hapus stok akun ini?")) return;
-
-  db.collection("account_stock").doc(id).delete()
-    .then(() => alert("Stok akun berhasil dihapus"))
-    .catch(e => alert(e.message));
+  db.collection("account_stock").doc(id).delete();
 }
 
-/* PAYMENT */
+/* ---------- PAYMENT ---------- */
 
 function savePayment() {
   const id = document.getElementById("paymentId").value;
@@ -338,7 +323,7 @@ function deletePayment(id) {
   db.collection("payments").doc(id).delete();
 }
 
-/* SETTINGS */
+/* ---------- SETTINGS ---------- */
 
 function saveSettings() {
   const data = {
@@ -368,7 +353,7 @@ function loadSettings() {
   });
 }
 
-/* ORDERS */
+/* ---------- ORDERS ---------- */
 
 function loadOrders() {
   db.collection("orders").orderBy("createdAt", "desc").onSnapshot(snapshot => {
@@ -439,15 +424,15 @@ function updateOrderStatus(id, status) {
   }).catch(e => alert(e.message));
 }
 
+/* ---------- KONFIRMASI PEMBAYARAN & KIRIM AKUN ---------- */
+
 function confirmOrderPaid(orderId) {
   const orderRef = db.collection("orders").doc(orderId);
 
   db.runTransaction(async transaction => {
     const orderDoc = await transaction.get(orderRef);
 
-    if (!orderDoc.exists) {
-      throw new Error("Order tidak ditemukan");
-    }
+    if (!orderDoc.exists) throw new Error("Order tidak ditemukan");
 
     const order = orderDoc.data();
 
@@ -457,7 +442,6 @@ function confirmOrderPaid(orderId) {
         paidAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-
       return "Order sudah punya akun. Status diubah ke paid.";
     }
 
@@ -468,13 +452,11 @@ function confirmOrderPaid(orderId) {
 
     const stockSnapshot = await transaction.get(stockQuery);
 
-    if (stockSnapshot.empty) {
-      throw new Error("Stok akun untuk produk ini habis");
-    }
+    if (stockSnapshot.empty) throw new Error("Stok akun untuk produk ini habis");
 
     const stockDoc = stockSnapshot.docs[0];
-    const stock = stockDoc.data();
     const stockRef = stockDoc.ref;
+    const stock = stockDoc.data();
 
     transaction.update(stockRef, {
       status: "sold",
@@ -493,11 +475,8 @@ function confirmOrderPaid(orderId) {
     });
 
     return "Pembayaran dikonfirmasi dan akun berhasil dikirim ke order.";
-  }).then(msg => {
-    alert(msg);
-  }).catch(e => {
-    alert(e.message);
-  });
+  }).then(msg => alert(msg))
+    .catch(e => alert(e.message));
 }
 
 function deleteOrder(id) {
