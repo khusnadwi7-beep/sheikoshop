@@ -24,13 +24,38 @@ function safeText(text) {
   });
 }
 
+function jsString(text) {
+  return JSON.stringify(String(text || ""));
+}
+
+function waNumber() {
+  return String(storeSettings.waAdmin || "").replace(/\D/g, "");
+}
+
 function closeModal() {
-  document.getElementById("modal").style.display = "none";
+  const modal = document.getElementById("modal");
+  modal.classList.remove("show");
+  modal.style.display = "none";
 }
 
 function openModal(html) {
+  const modal = document.getElementById("modal");
   document.getElementById("modalContent").innerHTML = html;
-  document.getElementById("modal").style.display = "flex";
+  modal.style.display = "flex";
+  modal.classList.add("show");
+}
+
+function scrollToSection(id) {
+  const target = document.getElementById(id);
+  if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function activateOrderStep(btn) {
+  document.querySelectorAll(".stepCard").forEach(item => {
+    item.classList.remove("active");
+  });
+
+  btn.classList.add("active");
 }
 
 function requireLogin() {
@@ -69,6 +94,7 @@ auth.onAuthStateChanged(user => {
 function showRegister() {
   openModal(`
     <h2>Daftar Pembeli</h2>
+    <p class="muted">Buat akun untuk checkout, melihat pesanan, dan memberi rating.</p>
 
     <div class="field">
       <label>Email</label>
@@ -104,6 +130,7 @@ function registerUser() {
 function showLogin() {
   openModal(`
     <h2>Login Pembeli</h2>
+    <p class="muted">Masuk untuk checkout dan melihat akun premium di Pesanan Saya.</p>
 
     <div class="field">
       <label>Email</label>
@@ -168,8 +195,13 @@ function loadSettings() {
     }
 
     if (storeSettings.waAdmin) {
-      document.getElementById("whatsappLink").href =
-        "https://wa.me/" + storeSettings.waAdmin.replace(/\D/g, "");
+      const link = "https://wa.me/" + waNumber();
+
+      const whatsappLink = document.getElementById("whatsappLink");
+      const floatingWa = document.getElementById("floatingWa");
+
+      if (whatsappLink) whatsappLink.href = link;
+      if (floatingWa) floatingWa.href = link;
     }
   });
 }
@@ -227,6 +259,8 @@ function loadPayments() {
 
 function renderProducts(products) {
   const wrap = document.getElementById("products");
+  if (!wrap) return;
+
   wrap.innerHTML = "";
 
   if (!products.length) {
@@ -245,10 +279,10 @@ function renderProducts(products) {
     wrap.innerHTML += `
       <div class="productCard">
         ${image}
-        <div class="muted">${safeText(p.category || "Produk")}</div>
+        <div class="muted">${safeText(p.category || "Produk Premium")}</div>
         <h3>${safeText(p.name)}</h3>
         <p>${safeText(p.description || "")}</p>
-        <p class="muted">Stok: ${stock}</p>
+        <p class="muted">Stok tersedia: ${stock}</p>
         <div class="price">${rupiah(p.price)}</div>
         <button class="btn" onclick="addToCart('${p.id}')" ${disabled}>Tambah Keranjang</button>
         <button class="btn ghost" onclick="orderProduct('${p.id}')" ${disabled}>Beli Sekarang</button>
@@ -259,6 +293,8 @@ function renderProducts(products) {
 
 function renderCategories(products) {
   const categories = document.getElementById("categories");
+  if (!categories) return;
+
   const list = ["Semua", ...new Set(products.map(p => p.category).filter(Boolean))];
 
   categories.innerHTML = "";
@@ -284,7 +320,7 @@ function filterCategory(category, btn) {
 }
 
 function searchProducts(keyword) {
-  const q = keyword.toLowerCase();
+  const q = String(keyword || "").toLowerCase();
 
   const result = allProducts.filter(p =>
     String(p.name || "").toLowerCase().includes(q) ||
@@ -298,7 +334,7 @@ function searchProducts(keyword) {
 function renderPaymentOptions() {
   if (!allPayments.length) {
     return `
-      <div class="paymentBox" style="padding:12px;border:1px solid #333;border-radius:14px;margin:12px 0;">
+      <div class="paymentBox">
         <b>Metode Pembayaran belum tersedia</b>
         <p class="muted">Silakan hubungi admin via WhatsApp.</p>
       </div>
@@ -338,7 +374,7 @@ function showPaymentDetail() {
   if (!pay) return;
 
   detail.innerHTML = `
-    <div class="paymentBox" style="padding:14px;border:1px solid #333;border-radius:14px;margin:12px 0;">
+    <div class="paymentBox">
       <h3>${safeText(pay.name)}</h3>
       <p><b>Tipe:</b> ${safeText(pay.type || "-")}</p>
       <p><b>Nama Rekening:</b> ${safeText(pay.accountName || "-")}</p>
@@ -393,7 +429,7 @@ function showCart() {
           const item = doc.data();
 
           html += `
-            <div class="paymentBox" style="padding:14px;border:1px solid #333;border-radius:14px;margin:12px 0;">
+            <div class="paymentBox">
               <h3>${safeText(item.productName)}</h3>
               <p>Harga: ${rupiah(item.productPrice)}</p>
               <button class="btn" onclick="orderProduct('${item.productId}')">Checkout</button>
@@ -422,14 +458,14 @@ function orderProduct(id) {
   if (!requireLogin()) return;
 
   const p = allProducts.find(item => item.id === id);
-  if (!p) return;
+  if (!p) return alert("Produk tidak ditemukan");
 
   const stock = productStocks[p.id] || 0;
   if (stock <= 0) return alert("Stok produk habis");
 
   openModal(`
     <h2>${safeText(p.name)}</h2>
-    <p>${safeText(p.description || "")}</p>
+    <p class="muted">${safeText(p.description || "")}</p>
     <h3>${rupiah(p.price)}</h3>
     <p class="muted">Stok tersedia: ${stock}</p>
 
@@ -459,7 +495,7 @@ function submitOrder(id) {
   if (!requireLogin()) return;
 
   const p = allProducts.find(item => item.id === id);
-  if (!p) return;
+  if (!p) return alert("Produk tidak ditemukan");
 
   const stock = productStocks[p.id] || 0;
   if (stock <= 0) return alert("Stok produk habis");
@@ -489,33 +525,50 @@ function submitOrder(id) {
     paymentAccountName: payment ? payment.accountName : "",
     paymentAccountNumber: payment ? payment.accountNumber : "",
     status: "pending",
+    reviewSubmitted: false,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(orderRef => {
-    alert("Pesanan berhasil dibuat. Silakan lakukan pembayaran.");
+    alert("Pesanan berhasil dibuat. Silakan lakukan pembayaran lalu kirim bukti transfer.");
 
     closeModal();
 
     if (storeSettings.waAdmin) {
       const paymentText = payment
-        ? `%0AMetode Bayar: ${payment.name}%0ATipe: ${payment.type || "-"}%0ANama Rekening: ${payment.accountName || "-"}%0ANomor: ${payment.accountNumber || "-"}`
-        : `%0AMetode Bayar: Hubungi Admin`;
+        ? `\nMetode Bayar: ${payment.name}\nTipe: ${payment.type || "-"}\nNama Rekening: ${payment.accountName || "-"}\nNomor: ${payment.accountNumber || "-"}`
+        : `\nMetode Bayar: Hubungi Admin`;
 
       const text =
-        `Halo admin Sheikoshop, saya ingin order:%0A%0A` +
-        `Order ID: ${orderRef.id}%0A` +
-        `Produk: ${p.name}%0A` +
-        `Harga: ${rupiah(p.price)}%0A` +
-        `Nama: ${customerName}%0A` +
-        `Email: ${currentUser.email}%0A` +
+        `Halo admin SheikoShop, saya ingin order:\n\n` +
+        `Order ID: ${orderRef.id}\n` +
+        `Produk: ${p.name}\n` +
+        `Harga: ${rupiah(p.price)}\n` +
+        `Nama: ${customerName}\n` +
+        `Email: ${currentUser.email}\n` +
         `WA: ${customerWa}` +
-        paymentText;
+        paymentText +
+        `\n\nSaya akan kirim bukti transfer setelah pembayaran.`;
 
       window.open(
-        "https://wa.me/" + storeSettings.waAdmin.replace(/\D/g, "") + "?text=" + text,
+        "https://wa.me/" + waNumber() + "?text=" + encodeURIComponent(text),
         "_blank"
       );
     }
   }).catch(e => alert(e.message));
+}
+
+function makeProofTransferLink(order) {
+  if (!storeSettings.waAdmin) return "";
+
+  const text =
+    `Halo Admin SheikoShop, saya ingin mengirim bukti transfer.\n\n` +
+    `Order ID: ${order.id}\n` +
+    `Produk: ${order.productName || "-"}\n` +
+    `Total: ${rupiah(order.total)}\n` +
+    `Nama: ${order.customerName || "-"}\n` +
+    `Email: ${order.userEmail || "-"}\n\n` +
+    `Saya lampirkan bukti transfer di chat ini.`;
+
+  return "https://wa.me/" + waNumber() + "?text=" + encodeURIComponent(text);
 }
 
 function showMyOrders() {
@@ -547,19 +600,20 @@ function showMyOrders() {
 
         orders.forEach(order => {
           const isPaid = order.status === "paid" || order.status === "done";
+          const proofLink = makeProofTransferLink(order);
 
           html += `
             <div class="orderDetailCard">
               <div class="orderHeader">
                 <h3>Detail Pesanan</h3>
                 <span class="orderBadge ${isPaid ? "success" : "warning"}">
-                  ${isPaid ? "Selesai" : "Menunggu"}
+                  ${isPaid ? "Selesai" : "Menunggu Pembayaran"}
                 </span>
               </div>
 
               <div class="orderIdBox">
                 <small>Order ID</small>
-                <b>#${order.id}</b>
+                <b>#${safeText(order.id)}</b>
               </div>
 
               <div class="orderSection">
@@ -573,7 +627,7 @@ function showMyOrders() {
 
                   <div class="step active">
                     <b>Menunggu Pembayaran</b>
-                    <small>Silakan lakukan pembayaran</small>
+                    <small>Silakan transfer sesuai metode pembayaran</small>
                   </div>
 
                   <div class="step ${isPaid ? "active" : ""}">
@@ -582,10 +636,20 @@ function showMyOrders() {
                   </div>
 
                   <div class="step ${isPaid ? "active" : ""}">
-                    <b>Pesanan Selesai</b>
-                    <small>${isPaid ? "Akun sudah dikirim" : "Akun belum dikirim"}</small>
+                    <b>Akun Premium Terkirim</b>
+                    <small>${isPaid ? "Akun sudah tersedia" : "Akun akan muncul setelah konfirmasi"}</small>
                   </div>
                 </div>
+
+                ${
+                  !isPaid && proofLink
+                    ? `
+                      <a class="btn green" target="_blank" href="${proofLink}">
+                        📸 Kirim Bukti Transfer
+                      </a>
+                    `
+                    : ""
+                }
               </div>
 
               <div class="orderSection">
@@ -595,9 +659,22 @@ function showMyOrders() {
                   <div class="miniIcon">${safeText((order.productName || "P").charAt(0))}</div>
                   <div>
                     <b>${safeText(order.productName || "-")}</b>
-                    <p>${rupiah(order.total)} / bulan</p>
+                    <p>${rupiah(order.total)}</p>
                   </div>
                 </div>
+              </div>
+
+              <div class="orderSection">
+                <h4>Metode Pembayaran</h4>
+                <p class="muted">
+                  ${safeText(order.paymentName || "Hubungi Admin")}
+                  ${order.paymentType ? " - " + safeText(order.paymentType) : ""}
+                </p>
+                ${
+                  order.paymentAccountNumber
+                    ? `<p><b>${safeText(order.paymentAccountNumber)}</b><br><span class="muted">${safeText(order.paymentAccountName || "")}</span></p>`
+                    : ""
+                }
               </div>
 
               <div class="orderSection">
@@ -612,7 +689,7 @@ function showMyOrders() {
                       <label>Password</label>
                       <div class="passwordRow">
                         <div class="accountBox">••••••••••••</div>
-                        <button class="btn" onclick="copyText('${safeText(order.accountPassword || "")}')">Salin</button>
+                        <button class="btn" onclick="copyText(${jsString(order.accountPassword || "")})">Salin</button>
                       </div>
 
                       <p class="warningBox">
@@ -626,6 +703,24 @@ function showMyOrders() {
                     `
                 }
               </div>
+
+              ${
+                isPaid
+                  ? `
+                    <div class="orderSection">
+                      <div class="reviewActionBox">
+                        <h4>Bagaimana pengalaman kamu?</h4>
+                        <p class="muted">Berikan rating agar pembeli lain semakin yakin.</p>
+                        ${
+                          order.reviewSubmitted
+                            ? `<button class="btn ghost" disabled>✅ Testimoni Sudah Dikirim</button>`
+                            : `<button class="btn" onclick="showReviewForm(${jsString(order.id)}, ${jsString(order.productName || "")})">⭐ Beri Rating & Testimoni</button>`
+                        }
+                      </div>
+                    </div>
+                  `
+                  : ""
+              }
             </div>
           `;
         });
@@ -635,6 +730,146 @@ function showMyOrders() {
       openModal(html);
     })
     .catch(e => alert(e.message));
+}
+
+function showReviewForm(orderId, productName) {
+  if (!requireLogin()) return;
+
+  openModal(`
+    <h2>Rating & Testimoni</h2>
+    <p class="muted">Review kamu akan tampil di halaman testimoni SheikoShop.</p>
+
+    <div class="paymentBox">
+      <b>${safeText(productName)}</b>
+      <p class="muted">Order ID: ${safeText(orderId)}</p>
+    </div>
+
+    <div class="field">
+      <label>Rating</label>
+      <select id="reviewRating">
+        <option value="5">⭐⭐⭐⭐⭐ - Sangat Puas</option>
+        <option value="4">⭐⭐⭐⭐ - Puas</option>
+        <option value="3">⭐⭐⭐ - Cukup</option>
+        <option value="2">⭐⭐ - Kurang</option>
+        <option value="1">⭐ - Tidak Puas</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Testimoni</label>
+      <textarea id="reviewText" placeholder="Tulis pengalaman kamu setelah membeli..."></textarea>
+    </div>
+
+    <button class="btn" onclick="submitReview(${jsString(orderId)}, ${jsString(productName)})">
+      Kirim Testimoni
+    </button>
+
+    <button class="btn ghost" onclick="showMyOrders()">Kembali</button>
+  `);
+}
+
+function submitReview(orderId, productName) {
+  if (!requireLogin()) return;
+
+  const rating = Number(document.getElementById("reviewRating").value);
+  const review = document.getElementById("reviewText").value.trim();
+
+  if (!review) return alert("Testimoni wajib diisi");
+
+  db.collection("orders").doc(orderId).get()
+    .then(doc => {
+      if (!doc.exists) throw new Error("Pesanan tidak ditemukan");
+
+      const order = doc.data();
+
+      if (order.userId !== currentUser.uid) {
+        throw new Error("Kamu tidak memiliki akses ke pesanan ini");
+      }
+
+      if (!(order.status === "paid" || order.status === "done")) {
+        throw new Error("Testimoni hanya bisa diberikan setelah pesanan selesai");
+      }
+
+      if (order.reviewSubmitted) {
+        throw new Error("Testimoni untuk pesanan ini sudah dikirim");
+      }
+
+      return db.collection("testimonials").add({
+        userId: currentUser.uid,
+        userEmail: currentUser.email,
+        orderId,
+        productName,
+        rating,
+        review,
+        active: true,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    })
+    .then(() => {
+      return db.collection("orders").doc(orderId).update({
+        reviewSubmitted: true,
+        reviewRating: rating,
+        reviewText: review,
+        reviewedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    })
+    .then(() => {
+      alert("Terima kasih. Testimoni berhasil dikirim.");
+      showMyOrders();
+    })
+    .catch(e => alert(e.message));
+}
+
+function loadTestimonials() {
+  const wrap = document.getElementById("testimonialList");
+  if (!wrap) return;
+
+  db.collection("testimonials")
+    .where("active", "==", true)
+    .limit(6)
+    .onSnapshot(snapshot => {
+      wrap.innerHTML = "";
+
+      if (snapshot.empty) {
+        wrap.innerHTML = `
+          <div class="testimonialCard">
+            <div class="testimonialStars">⭐⭐⭐⭐⭐</div>
+            <p>Belum ada testimoni. Jadilah pembeli pertama yang memberi rating.</p>
+            <b>SheikoShop</b>
+          </div>
+        `;
+        return;
+      }
+
+      const testimonials = [];
+
+      snapshot.forEach(doc => {
+        testimonials.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+
+      testimonials.sort((a, b) => {
+        const da = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate() : new Date(0);
+        const dbb = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate() : new Date(0);
+        return dbb - da;
+      });
+
+      testimonials.forEach(t => {
+        const rating = Math.max(1, Math.min(5, Number(t.rating || 5)));
+
+        wrap.innerHTML += `
+          <div class="testimonialCard">
+            <div class="testimonialStars">${"⭐".repeat(rating)}</div>
+            <p>${safeText(t.review || "")}</p>
+            <br>
+            <b>${safeText(t.productName || "Produk Premium")}</b>
+            <p class="muted">${safeText(t.userEmail || "Pembeli SheikoShop")}</p>
+          </div>
+        `;
+      });
+    });
 }
 
 function copyText(text) {
@@ -648,6 +883,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadProducts();
   loadAccountStocks();
   loadPayments();
+  loadTestimonials();
   updateAuthMenu();
 
   const searchInput = document.getElementById("searchInput");
@@ -661,7 +897,11 @@ document.addEventListener("DOMContentLoaded", () => {
     heroSearchInput.addEventListener("input", e => searchProducts(e.target.value));
   }
 
-  document.getElementById("modal").addEventListener("click", e => {
-    if (e.target.id === "modal") closeModal();
-  });
+  const modal = document.getElementById("modal");
+
+  if (modal) {
+    modal.addEventListener("click", e => {
+      if (e.target.id === "modal") closeModal();
+    });
+  }
 });
