@@ -39,6 +39,7 @@ function requireLogin() {
     showLogin();
     return false;
   }
+
   return true;
 }
 
@@ -68,8 +69,17 @@ auth.onAuthStateChanged(user => {
 function showRegister() {
   openModal(`
     <h2>Daftar Pembeli</h2>
-    <div class="field"><label>Email</label><input id="registerEmail" type="email"></div>
-    <div class="field"><label>Password</label><input id="registerPassword" type="password"></div>
+
+    <div class="field">
+      <label>Email</label>
+      <input id="registerEmail" type="email" placeholder="email@gmail.com">
+    </div>
+
+    <div class="field">
+      <label>Password</label>
+      <input id="registerPassword" type="password" placeholder="Minimal 6 karakter">
+    </div>
+
     <button class="btn" onclick="registerUser()">Daftar</button>
     <button class="btn ghost" onclick="showLogin()">Sudah punya akun? Login</button>
     <button class="btn ghost" onclick="closeModal()">Tutup</button>
@@ -94,8 +104,17 @@ function registerUser() {
 function showLogin() {
   openModal(`
     <h2>Login Pembeli</h2>
-    <div class="field"><label>Email</label><input id="loginEmail" type="email"></div>
-    <div class="field"><label>Password</label><input id="loginPassword" type="password"></div>
+
+    <div class="field">
+      <label>Email</label>
+      <input id="loginEmail" type="email" placeholder="email@gmail.com">
+    </div>
+
+    <div class="field">
+      <label>Password</label>
+      <input id="loginPassword" type="password" placeholder="Password">
+    </div>
+
     <button class="btn" onclick="loginUser()">Login</button>
     <button class="btn ghost" onclick="showRegister()">Belum punya akun? Daftar</button>
     <button class="btn ghost" onclick="closeModal()">Tutup</button>
@@ -144,7 +163,8 @@ function loadSettings() {
     }
 
     if (storeSettings.heroDescription) {
-      document.getElementById("heroDescription").innerText = storeSettings.heroDescription;
+      document.getElementById("heroDescription").innerText =
+        storeSettings.heroDescription;
     }
 
     if (storeSettings.waAdmin) {
@@ -324,6 +344,7 @@ function showPaymentDetail() {
       <p><b>Nama Rekening:</b> ${safeText(pay.accountName || "-")}</p>
       <p><b>Nomor:</b> ${safeText(pay.accountNumber || "-")}</p>
       <p>${safeText(pay.description || "")}</p>
+
       ${
         pay.qrisUrl
           ? `<img src="${safeText(pay.qrisUrl)}" alt="QRIS" style="width:100%;max-width:260px;border-radius:16px;margin-top:10px;">`
@@ -502,7 +523,6 @@ function showMyOrders() {
 
   db.collection("orders")
     .where("userId", "==", currentUser.uid)
-    .orderBy("createdAt", "desc")
     .get()
     .then(snapshot => {
       let html = `<h2>Pesanan Saya</h2>`;
@@ -510,28 +530,102 @@ function showMyOrders() {
       if (snapshot.empty) {
         html += `<p class="muted">Belum ada pesanan.</p>`;
       } else {
+        const orders = [];
+
         snapshot.forEach(doc => {
-          const order = doc.data();
+          orders.push({
+            id: doc.id,
+            ...doc.data()
+          });
+        });
+
+        orders.sort((a, b) => {
+          const da = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate() : new Date(0);
+          const dbb = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate() : new Date(0);
+          return dbb - da;
+        });
+
+        orders.forEach(order => {
+          const isPaid = order.status === "paid" || order.status === "done";
 
           html += `
-            <div class="paymentBox" style="padding:14px;border:1px solid #333;border-radius:14px;margin:12px 0;">
-              <h3>${safeText(order.productName)}</h3>
-              <p><b>Order ID:</b> ${doc.id}</p>
-              <p><b>Total:</b> ${rupiah(order.total)}</p>
-              <p><b>Status:</b> ${safeText(order.status || "pending")}</p>
-              <p><b>Pembayaran:</b> ${safeText(order.paymentName || "-")}</p>
+            <div class="orderDetailCard">
+              <div class="orderHeader">
+                <h3>Detail Pesanan</h3>
+                <span class="orderBadge ${isPaid ? "success" : "warning"}">
+                  ${isPaid ? "Selesai" : "Menunggu"}
+                </span>
+              </div>
 
-              ${
-                order.accountEmail
-                  ? `
-                    <div style="margin-top:12px;padding:12px;border:1px solid #333;border-radius:12px;">
-                      <b>Data Akun:</b>
-                      <p>Email: ${safeText(order.accountEmail)}</p>
-                      <p>Password: ${safeText(order.accountPassword || "-")}</p>
-                    </div>
-                  `
-                  : `<p class="muted">Akun akan muncul setelah pembayaran dikonfirmasi admin.</p>`
-              }
+              <div class="orderIdBox">
+                <small>Order ID</small>
+                <b>#${order.id}</b>
+              </div>
+
+              <div class="orderSection">
+                <h4>Status Pesanan</h4>
+
+                <div class="timeline">
+                  <div class="step active">
+                    <b>Pesanan Dibuat</b>
+                    <small>Pesanan berhasil dibuat</small>
+                  </div>
+
+                  <div class="step active">
+                    <b>Menunggu Pembayaran</b>
+                    <small>Silakan lakukan pembayaran</small>
+                  </div>
+
+                  <div class="step ${isPaid ? "active" : ""}">
+                    <b>Pembayaran Diverifikasi</b>
+                    <small>${isPaid ? "Pembayaran sudah dikonfirmasi admin" : "Menunggu konfirmasi admin"}</small>
+                  </div>
+
+                  <div class="step ${isPaid ? "active" : ""}">
+                    <b>Pesanan Selesai</b>
+                    <small>${isPaid ? "Akun sudah dikirim" : "Akun belum dikirim"}</small>
+                  </div>
+                </div>
+              </div>
+
+              <div class="orderSection">
+                <h4>Informasi Produk</h4>
+
+                <div class="productInfo">
+                  <div class="miniIcon">${safeText((order.productName || "P").charAt(0))}</div>
+                  <div>
+                    <b>${safeText(order.productName || "-")}</b>
+                    <p>${rupiah(order.total)} / bulan</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="orderSection">
+                <h4>Informasi Akun</h4>
+
+                ${
+                  order.accountEmail
+                    ? `
+                      <label>Email</label>
+                      <div class="accountBox">${safeText(order.accountEmail)}</div>
+
+                      <label>Password</label>
+                      <div class="passwordRow">
+                        <div class="accountBox">••••••••••••</div>
+                        <button class="btn" onclick="copyText('${safeText(order.accountPassword || "")}')">Salin</button>
+                      </div>
+
+                      <p class="warningBox">
+                        Harap simpan informasi akun dengan aman dan jangan bagikan ke orang lain.
+                      </p>
+                    `
+                    : `
+                      <p class="muted">
+                        Akun akan muncul setelah pembayaran dikonfirmasi admin.
+                      </p>
+                    `
+                }
+              </div>
             </div>
           `;
         });
@@ -541,6 +635,12 @@ function showMyOrders() {
       openModal(html);
     })
     .catch(e => alert(e.message));
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text)
+    .then(() => alert("Berhasil disalin"))
+    .catch(() => alert("Gagal menyalin"));
 }
 
 document.addEventListener("DOMContentLoaded", () => {
