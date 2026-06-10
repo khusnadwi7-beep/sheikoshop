@@ -264,5 +264,31 @@
     });
   </script>
 
+  <script>
+function openMobileMenu(event){
+  if(event){
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  var menu = document.getElementById("navlinks");
+
+  if(menu){
+    menu.classList.toggle("show");
+  }
+}
+
+document.addEventListener("click", function(event){
+  var menu = document.getElementById("navlinks");
+  var btn = document.getElementById("mobileMenuBtn");
+
+  if(!menu || !btn) return;
+
+  if(!menu.contains(event.target) && !btn.contains(event.target)){
+    menu.classList.remove("show");
+  }
+});
+</script>
+  
 </body>
 </html>
