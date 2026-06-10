@@ -933,3 +933,56 @@ button,input,textarea,select{font-family:inherit}
     font-size:26px;
   }
 }
+
+.mobileMenuBtn{
+  display:none;
+  width:44px;
+  height:44px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:15px;
+  background:linear-gradient(135deg,#7c3aed,#06b6d4);
+  color:white;
+  cursor:pointer;
+  font-size:24px;
+  z-index:100000;
+  position:relative;
+}
+
+@media(max-width:850px){
+  .mobileMenuBtn{
+    display:grid !important;
+    place-items:center;
+  }
+
+  .search{
+    display:none !important;
+  }
+
+  .navlinks{
+    display:none !important;
+    position:absolute !important;
+    top:70px;
+    left:12px;
+    right:12px;
+    background:#0f172a;
+    border:1px solid #273044;
+    border-radius:20px;
+    padding:14px;
+    flex-direction:column;
+    gap:9px;
+    z-index:99999;
+    box-shadow:0 24px 80px rgba(0,0,0,.55);
+  }
+
+  .navlinks.show{
+    display:flex !important;
+  }
+
+  .navlinks a{
+    display:block;
+    width:100%;
+    padding:14px 15px;
+    border-radius:14px;
+    background:#111827;
+  }
+}
