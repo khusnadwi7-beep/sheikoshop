@@ -50,14 +50,19 @@ function closeMobileMenu() {
   if (menu) menu.classList.remove("show");
 }
 
+window.toggleMobileMenu = toggleMobileMenu;
+window.closeMobileMenu = closeMobileMenu;
+
 function closeModal() {
   const modal = document.getElementById("modal");
+  if (!modal) return;
   modal.classList.remove("show");
   modal.style.display = "none";
 }
 
 function openModal(html) {
   const modal = document.getElementById("modal");
+  if (!modal) return;
   document.getElementById("modalContent").innerHTML = html;
   modal.style.display = "flex";
   modal.classList.add("show");
@@ -210,7 +215,6 @@ function loadSettings() {
 
     if (storeSettings.waAdmin) {
       const link = "https://wa.me/" + waNumber();
-
       const whatsappLink = document.getElementById("whatsappLink");
       const floatingWa = document.getElementById("floatingWa");
 
@@ -921,14 +925,22 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  document.addEventListener("click", e => {
-    const menu = document.getElementById("navlinks");
-    const btn = document.querySelector(".mobileMenuBtn");
+  const mobileBtn = document.getElementById("mobileMenuBtn");
+  const mobileMenu = document.getElementById("navlinks");
 
-    if (!menu || !btn) return;
+  if (mobileBtn && mobileMenu) {
+    mobileBtn.addEventListener("click", function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      mobileMenu.classList.toggle("show");
+    });
 
-    if (!menu.contains(e.target) && !btn.contains(e.target)) {
-      closeMobileMenu();
-    }
-  });
+    mobileMenu.addEventListener("click", function(e) {
+      e.stopPropagation();
+    });
+
+    document.addEventListener("click", function() {
+      mobileMenu.classList.remove("show");
+    });
+  }
 });
