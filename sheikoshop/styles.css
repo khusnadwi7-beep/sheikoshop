@@ -17,7 +17,6 @@
 }
 
 *{box-sizing:border-box}
-
 html{scroll-behavior:smooth}
 
 body{
@@ -45,11 +44,7 @@ button,input,textarea,select{font-family:inherit}
 .bgGlowOne{top:80px;right:-80px;background:#7c3aed}
 .bgGlowTwo{bottom:80px;left:-120px;background:#06b6d4}
 
-.container{
-  max-width:1180px;
-  margin:auto;
-  padding:24px;
-}
+.container{max-width:1180px;margin:auto;padding:24px}
 
 .nav{
   display:flex;
@@ -127,6 +122,9 @@ button,input,textarea,select{font-family:inherit}
   padding:9px 13px;
   cursor:pointer;
   font-size:22px;
+  line-height:1;
+  position:relative;
+  z-index:10001;
 }
 
 .btn{
@@ -198,13 +196,7 @@ button,input,textarea,select{font-family:inherit}
   max-width:620px;
 }
 
-.heroActions{
-  display:flex;
-  gap:12px;
-  flex-wrap:wrap;
-  margin:24px 0;
-}
-
+.heroActions{display:flex;gap:12px;flex-wrap:wrap;margin:24px 0}
 .heroSearch{display:flex;margin:20px 0}
 
 .heroSearch input{
@@ -263,11 +255,7 @@ button,input,textarea,select{font-family:inherit}
   border:1px solid #166534;
 }
 
-.miniTimeline{
-  display:grid;
-  gap:10px;
-  margin-top:18px;
-}
+.miniTimeline{display:grid;gap:10px;margin-top:18px}
 
 .miniStep{
   padding:12px 14px;
@@ -325,16 +313,8 @@ button,input,textarea,select{font-family:inherit}
   text-align:center;
 }
 
-.statCard b{
-  display:block;
-  font-size:28px;
-  margin-bottom:5px;
-}
-
-.statCard span{
-  color:#94a3b8;
-  font-size:13px;
-}
+.statCard b{display:block;font-size:28px;margin-bottom:5px}
+.statCard span{color:#94a3b8;font-size:13px}
 
 .sectionHead{
   display:flex;
@@ -344,10 +324,7 @@ button,input,textarea,select{font-family:inherit}
   margin-top:34px;
 }
 
-.sectionHead.center{
-  justify-content:center;
-  text-align:center;
-}
+.sectionHead.center{justify-content:center;text-align:center}
 
 .sectionTitle{
   margin:0 0 8px;
@@ -410,20 +387,10 @@ button,input,textarea,select{font-family:inherit}
   transition:.25s;
 }
 
-.tab:hover{
-  transform:translateY(-2px);
-  border-color:#7c3aed;
-}
+.tab:hover{transform:translateY(-2px);border-color:#7c3aed}
+.tab.active{background:#2b214d;border-color:#6d5dfc}
 
-.tab.active{
-  background:#2b214d;
-  border-color:#6d5dfc;
-}
-
-.howOrderSection{
-  margin-top:80px;
-  padding:42px 0;
-}
+.howOrderSection{margin-top:80px;padding:42px 0}
 
 .stepGrid{
   display:grid;
@@ -494,10 +461,7 @@ button,input,textarea,select{font-family:inherit}
   margin-bottom:12px;
 }
 
-.testimonialCard p{
-  color:#dbe4f0;
-  line-height:1.6;
-}
+.testimonialCard p{color:#dbe4f0;line-height:1.6}
 
 .faqSection{margin-top:70px}
 
@@ -515,10 +479,7 @@ button,input,textarea,select{font-family:inherit}
   padding:22px;
 }
 
-.faqCard p{
-  color:#9aa4b2;
-  line-height:1.6;
-}
+.faqCard p{color:#9aa4b2;line-height:1.6}
 
 .support{
   display:flex;
@@ -597,10 +558,7 @@ button,input,textarea,select{font-family:inherit}
   outline:none;
 }
 
-.field textarea{
-  min-height:110px;
-  resize:vertical;
-}
+.field textarea{min-height:110px;resize:vertical}
 
 .paymentBox{
   border:1px solid var(--line);
@@ -682,10 +640,7 @@ button,input,textarea,select{font-family:inherit}
   margin-top:16px;
 }
 
-.orderSection h4{
-  margin:0 0 14px;
-  font-size:15px;
-}
+.orderSection h4{margin:0 0 14px;font-size:15px}
 
 .productInfo{
   display:flex;
@@ -728,10 +683,7 @@ button,input,textarea,select{font-family:inherit}
   align-items:center;
 }
 
-.passwordRow .accountBox{
-  flex:1;
-  margin-bottom:0;
-}
+.passwordRow .accountBox{flex:1;margin-bottom:0}
 
 .warningBox{
   background:#111827;
@@ -792,7 +744,7 @@ button,input,textarea,select{font-family:inherit}
   }
 
   .navlinks.show{
-    display:flex;
+    display:flex !important;
   }
 
   .navlinks a{
