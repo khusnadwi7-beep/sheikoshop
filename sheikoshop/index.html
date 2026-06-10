@@ -19,21 +19,23 @@
 
     <input id="searchInput" class="search" placeholder="Cari aplikasi premium...">
 
-    <button type="button" class="mobileMenuBtn" id="mobileMenuBtn">☰</button>
+    <button type="button" class="mobileMenuBtn" id="mobileMenuBtn" aria-label="Buka menu">
+      ☰
+    </button>
 
     <div class="navlinks" id="navlinks">
-      <a href="#home" onclick="closeMobileMenu()">Beranda</a>
-      <a href="#produk" onclick="closeMobileMenu()">Produk</a>
-      <a href="#cara-order" onclick="closeMobileMenu()">Cara Order</a>
-      <a href="#testimoni" onclick="closeMobileMenu()">Testimoni</a>
-      <a href="#faq" onclick="closeMobileMenu()">FAQ</a>
+      <a href="#home">Beranda</a>
+      <a href="#produk">Produk</a>
+      <a href="#cara-order">Cara Order</a>
+      <a href="#testimoni">Testimoni</a>
+      <a href="#faq">FAQ</a>
 
-      <a href="#" id="cartMenu" onclick="closeMobileMenu(); showCart()">Keranjang</a>
-      <a href="#" id="ordersMenu" onclick="closeMobileMenu(); showMyOrders()">Pesanan Saya</a>
+      <a href="#" id="cartMenu" onclick="showCart()">Keranjang</a>
+      <a href="#" id="ordersMenu" onclick="showMyOrders()">Pesanan Saya</a>
 
-      <a href="#" id="loginMenu" onclick="closeMobileMenu(); showLogin()">Login</a>
-      <a href="#" id="registerMenu" onclick="closeMobileMenu(); showRegister()">Daftar</a>
-      <a href="#" id="logoutMenu" onclick="closeMobileMenu(); logoutUser()" style="display:none;">Logout</a>
+      <a href="#" id="loginMenu" onclick="showLogin()">Login</a>
+      <a href="#" id="registerMenu" onclick="showRegister()">Daftar</a>
+      <a href="#" id="logoutMenu" onclick="logoutUser()" style="display:none;">Logout</a>
     </div>
   </nav>
 
@@ -215,6 +217,7 @@
       </div>
       <a id="whatsappLink" class="btn green" href="#" target="_blank">Chat WhatsApp</a>
     </section>
+
   </main>
 
   <a id="floatingWa" class="floatingWa" href="#" target="_blank">💬</a>
@@ -230,41 +233,36 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+
   <script src="config.js"></script>
   <script src="app.js"></script>
-  
+
   <script>
-document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function () {
+      const btn = document.getElementById("mobileMenuBtn");
+      const menu = document.getElementById("navlinks");
 
-    const btn = document.getElementById("mobileMenuBtn");
-    const menu = document.getElementById("navlinks");
+      if (!btn || !menu) return;
 
-    if (!btn || !menu) {
-        console.log("Menu tidak ditemukan");
-        return;
-    }
-
-    btn.addEventListener("click", function (e) {
+      btn.addEventListener("click", function (e) {
         e.preventDefault();
         e.stopPropagation();
-
         menu.classList.toggle("show");
-    });
+      });
 
-    menu.querySelectorAll("a").forEach(function(link){
-        link.addEventListener("click", function(){
-            menu.classList.remove("show");
+      menu.querySelectorAll("a").forEach(function (link) {
+        link.addEventListener("click", function () {
+          menu.classList.remove("show");
         });
-    });
+      });
 
-    document.addEventListener("click", function(e){
+      document.addEventListener("click", function (e) {
         if (!menu.contains(e.target) && !btn.contains(e.target)) {
-            menu.classList.remove("show");
+          menu.classList.remove("show");
         }
+      });
     });
+  </script>
 
-});
-</script>
-  
 </body>
 </html>
