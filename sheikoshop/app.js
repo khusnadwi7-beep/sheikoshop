@@ -40,6 +40,16 @@ function normalizeText(text) {
     .trim();
 }
 
+function toggleMobileMenu() {
+  const menu = document.getElementById("navlinks");
+  if (menu) menu.classList.toggle("show");
+}
+
+function closeMobileMenu() {
+  const menu = document.getElementById("navlinks");
+  if (menu) menu.classList.remove("show");
+}
+
 function closeModal() {
   const modal = document.getElementById("modal");
   modal.classList.remove("show");
@@ -54,15 +64,13 @@ function openModal(html) {
 }
 
 function scrollToSection(id) {
+  closeMobileMenu();
   const target = document.getElementById(id);
   if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function activateOrderStep(btn) {
-  document.querySelectorAll(".stepCard").forEach(item => {
-    item.classList.remove("active");
-  });
-
+  document.querySelectorAll(".stepCard").forEach(item => item.classList.remove("active"));
   btn.classList.add("active");
 }
 
@@ -72,7 +80,6 @@ function requireLogin() {
     showLogin();
     return false;
   }
-
   return true;
 }
 
@@ -198,8 +205,7 @@ function loadSettings() {
     }
 
     if (storeSettings.heroDescription) {
-      document.getElementById("heroDescription").innerText =
-        storeSettings.heroDescription;
+      document.getElementById("heroDescription").innerText = storeSettings.heroDescription;
     }
 
     if (storeSettings.waAdmin) {
@@ -238,13 +244,9 @@ function loadAccountStocks() {
 
       snapshot.forEach(doc => {
         const s = doc.data();
-
         if (!s.productId) return;
 
-        if (!productStocks[s.productId]) {
-          productStocks[s.productId] = 0;
-        }
-
+        if (!productStocks[s.productId]) productStocks[s.productId] = 0;
         productStocks[s.productId]++;
       });
 
@@ -404,7 +406,6 @@ function showPaymentDetail() {
       <p><b>Nama Rekening:</b> ${safeText(pay.accountName || "-")}</p>
       <p><b>Nomor:</b> ${safeText(pay.accountNumber || "-")}</p>
       <p>${safeText(pay.description || "")}</p>
-
       ${
         pay.qrisUrl
           ? `<img src="${safeText(pay.qrisUrl)}" alt="QRIS" style="width:100%;max-width:260px;border-radius:16px;margin-top:10px;">`
@@ -553,7 +554,6 @@ function submitOrder(id) {
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(orderRef => {
     alert("Pesanan berhasil dibuat. Silakan lakukan pembayaran lalu kirim bukti transfer.");
-
     closeModal();
 
     if (storeSettings.waAdmin) {
@@ -635,9 +635,9 @@ function showMyOrders() {
                 </span>
               </div>
 
-              <div class="orderIdBox">
-                <small>Order ID</small>
-                <b>#${safeText(order.id)}</b>
+              <div class="orderSection">
+                <h4>Order ID</h4>
+                <div class="accountBox">#${safeText(order.id)}</div>
               </div>
 
               <div class="orderSection">
@@ -667,11 +667,7 @@ function showMyOrders() {
 
                 ${
                   !isPaid && proofLink
-                    ? `
-                      <a class="btn green" target="_blank" href="${proofLink}">
-                        📸 Kirim Bukti Transfer
-                      </a>
-                    `
+                    ? `<a class="btn green" target="_blank" href="${proofLink}">📸 Kirim Bukti Transfer</a>`
                     : ""
                 }
               </div>
@@ -720,11 +716,7 @@ function showMyOrders() {
                         Harap simpan informasi akun dengan aman dan jangan bagikan ke orang lain.
                       </p>
                     `
-                    : `
-                      <p class="muted">
-                        Akun akan muncul setelah pembayaran dikonfirmasi admin.
-                      </p>
-                    `
+                    : `<p class="muted">Akun akan muncul setelah pembayaran dikonfirmasi admin.</p>`
                 }
               </div>
 
@@ -928,4 +920,15 @@ document.addEventListener("DOMContentLoaded", () => {
       if (e.target.id === "modal") closeModal();
     });
   }
+
+  document.addEventListener("click", e => {
+    const menu = document.getElementById("navlinks");
+    const btn = document.querySelector(".mobileMenuBtn");
+
+    if (!menu || !btn) return;
+
+    if (!menu.contains(e.target) && !btn.contains(e.target)) {
+      closeMobileMenu();
+    }
+  });
 });
